@@ -2,7 +2,7 @@
   "name": "udp_connector",
   "version": "1.0.0",
   "description": "WebSocket-to-UDP bridge for forwarding encrypted client messages to a local UDP server",
-  "author": "Andrej Kudriavcev <andrej@kudriavcev.info>",
+  "author": "Andrej Kudriavcev",
   "keywords": [
     "websocket",
     "udp",
