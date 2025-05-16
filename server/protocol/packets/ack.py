@@ -7,6 +7,7 @@ Last Updated: 15/05/2025
 """
 
 from .base import BasePacket
+from server.config import DEBUG
 
 class AckPacket(BasePacket):
     """
@@ -25,7 +26,7 @@ class AckPacket(BasePacket):
 
         if not message_id:
             # Error, no message ID provided, silently ignore
-            if self.server.DEBUG:
+            if DEBUG:
                 print(f"[ACK] No message ID provided in ACK from session_id={session_id}")
             return None
 
@@ -33,7 +34,7 @@ class AckPacket(BasePacket):
             # Acknowledge the message in the dispatcher and remove it from the queue
             self.server.dispatcher.acknowledge(session_id, message_id)
 
-        if self.server.DEBUG:
+        if DEBUG:
             print(f"[ACK] Received ACK for msg_id={message_id} from session_id={session_id}")
 
         # No response required for ACK

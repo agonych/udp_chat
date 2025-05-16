@@ -3,9 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "description": "Frontend client for UDPChat-AI, built with React and Vite.",
-  "type": "module",
   "author": "Andrej Kudriavcev",
   "license": "MIT",
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

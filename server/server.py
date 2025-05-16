@@ -118,7 +118,7 @@ class UDPChatServer:
                 try:
                     message = json.loads(data.decode())
                     if DEBUG:
-                        print(f"Received message from {addr}: {message}")
+                        print(f"Received message from {addr}: {message['type']}")
                     # Call the handle_message method to process the received message
                     self.handle_message(message, addr)
                 except Exception as e:
@@ -318,7 +318,7 @@ class UDPChatServer:
         ciphertext = message.get("ciphertext")
         nonce = message.get("nonce")
         if DEBUG:
-            print(f"Received SECURE_MSG from {addr}: {message}")
+            print(f"Received SECURE_MSG from {addr}")
         # Check if the message format is valid
         if not session_id or not ciphertext or not nonce:
             # If the message format is incomplete, return an error

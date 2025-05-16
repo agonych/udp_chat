@@ -107,12 +107,8 @@ export const AppProvider = ({ children }) => {
                 break;
             case "STATUS":
                 // Handle status messages - update user status
-                const userData = payload.data?.user;
-                if (userData && userData.user_id) {
-                    setUser(userData);
-                } else {
-                    setUser(null);
-                }
+                setUser(payload.data.user);
+                setLoading(false);
                 break;
             case "PLEASE_LOGIN":
                 // Handle login request - the password is required for the user

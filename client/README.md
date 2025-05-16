@@ -50,14 +50,11 @@ You can change this for deployment or testing purposes.
 
 ## Project Structure
 
+- `public/`
+    - `icon.svg`: Favicon for the app
 - `src/`
-    - `main.jsx`: Entry point for the React app
-    - `App.jsx`: Main UI logic
-    - `config.js`: Configuration for WebSocket server
-    - `theme.js`: Theme configuration for Material UI
-    - `App.css`: Global styles
-    - `index.css`: Base styles
     - `assets/`: Static files such as logos
+        - `logo.svg`: Logo for the app
     - `components/`: Reusable components
         - `ChatRoom.jsx`: Chat Room component
         - `LoginForm.jsx`: Login form component
@@ -74,6 +71,19 @@ You can change this for deployment or testing purposes.
         - `useSecureMessage.js`: Hook for sendEncrypted wrapper
         - `useSecureTransport.js`: Hook for secure transport layer
         - `useSession.js`: Hook for session management
+    - `App.css`: Application styles
+    - `App.jsx`: Main UI logic
+    - `config.js`: Configuration for WebSocket server
+    - `index.css`: Base styles
+    - `main.jsx`: Entry point for the React app
+    - `theme.js`: Theme configuration for Material UI
+- `.env`: Environment variables
+- `.env.sample`: Sample environment variables
+- `eslint.json`: Code Linter configuration
+- `index.html`: Main HTML file
+- `package.json`: Project metadata and dependencies
+- `package-lock.json`: Dependency lock file
+- `vite.config.mjs`: Vite configuration file
 
 ## Dependencies
 
