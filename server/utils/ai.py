@@ -26,9 +26,7 @@ def build_chat_prompt(messages, user, content):
                 "You are participating in a group chat. Your goal is to respond "
                  f"as if you are '{user}', using a casual, human-like, "
                  f"friendly tone. "
-                "Keep your message short and relevant to the conversation. "
-                "Do not use long paragraphs, lists, or formal language. "
-                "Do not introduce yourself or sign messages."
+
         }
     ]
     for m in messages:
@@ -50,8 +48,10 @@ def build_chat_prompt(messages, user, content):
             "content": (
                 f"Continue the chat as if you are {user}. "
                 "Craft the next message that fits naturally into the "
-                "conversation, something user would like to say next. Do not include "
-                "the name of the user in your response."
+                "conversation, something user would like to say next. Do not "
+                "mention the name of the user you are pretending to be in "
+                "your response. Do not use long paragraphs, lists, or formal "
+                "language. Do not introduce yourself or sign messages. Do not put your answer in quotes or brackets."
             )
         })
     return prompt
@@ -69,7 +69,7 @@ def gtp_get_ai_response(messages, user, content, model="gpt-3.5-turbo"):
     try:
         client = OpenAI()
         response = client.chat.completions.create(model=model, messages=prompt)
-        return response.choices[0].message.content.strip()
+        return response.choices[0].message.content.strip().strip("\"'").strip()
     except Exception as e:
         print("AI generation failed:", e)
         return None
@@ -87,7 +87,7 @@ def ollama_get_ai_response(messages, user, content, model="mistral"):
     prompt = build_chat_prompt(messages, user, content)
     try:
         response = ollama.chat(model=model, messages=prompt)
-        return response['message']['content'].strip()
+        return response['message']['content'].strip().strip("\"'").strip()
     except Exception as e:
         print("AI generation failed:", e)
         return None

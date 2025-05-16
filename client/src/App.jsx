@@ -41,8 +41,9 @@ function App() {
     useSecureTransport(); // Set up secure transport for messages
     useKeepAlive(); // Keep the session alive
     // Import context and hooks
-    const { user, loading, currentRoom } = useApp();
+    const { user, loading, currentRoom, logout } = useApp();
 
+    console.log("[App] User:", user);
     // Build the UI
     return (
         <Box
@@ -97,6 +98,11 @@ function App() {
                     <>
                         <Typography variant="body1">Welcome, {user.name}</Typography>
                         <RoomList />
+                        <Box mt={2}>
+                            <Typography variant="body2" onClick={logout} sx={{ cursor: "pointer", color: "blue" }}>
+                                Logout
+                            </Typography>
+                        </Box>
                     </>
                 )}
             </Paper>

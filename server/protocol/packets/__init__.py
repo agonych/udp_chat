@@ -9,6 +9,7 @@ Last Updated: 15/05/2025
 from .ack import AckPacket # Broadcast ACK packet
 from .hello import HelloPacket # Hello packet
 from .login import LoginPacket # Login packet
+from .logout import LogoutPacket # Logout packet
 from .status import StatusPacket # Status packet
 from .merge_session import MergeSessionPacket # Merge session packet
 from .list_rooms import ListRoomsPacket # List rooms packet

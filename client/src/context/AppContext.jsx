@@ -74,19 +74,11 @@ export const AppProvider = ({ children }) => {
         console.log("Logging out user, clearing session...");
         try {
             setUser(null); // Clear user data
-            setSessionId(null); // Clear session ID
-            setAesKey(null); // Clear AES key
             setRequirePassword(false); // Reset password requirement
             setPendingEmail(null); // Clear pending email
+            sendEncrypted({type: "LOGOUT"}, { socket, aesKey, sessionId });
         } catch (err) {
             console.warn("Error during logout:", err);
-        } finally {
-            // Close the WebSocket connection if it exists
-            if (socket?.readyState === WebSocket.OPEN) {
-                socket.close();
-            }
-            // Clear the socket reference
-            setSocket(null);
         }
     };
 
@@ -115,8 +107,12 @@ export const AppProvider = ({ children }) => {
                 break;
             case "STATUS":
                 // Handle status messages - update user status
-                setUser(payload.data.user);
-                setLoading(false);
+                const userData = payload.data?.user;
+                if (userData && userData.user_id) {
+                    setUser(userData);
+                } else {
+                    setUser(null);
+                }
                 break;
             case "PLEASE_LOGIN":
                 // Handle login request - the password is required for the user

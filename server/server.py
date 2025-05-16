@@ -294,11 +294,11 @@ class UDPChatServer:
         # server's public key, signature, and fingerprint
         response = {
             "type": "SESSION_INIT",
-            "session_id": session_id,
-            "encrypted_key": encrypted_key.hex(),
-            "server_pubkey": get_server_pubkey_der(self.public_key).hex(),
-            "signature": aes_signature.hex(),
-            "fingerprint": self.fingerprint,
+            "session_id": session_id, # Session ID for the client
+            "encrypted_key": encrypted_key.hex(), # Encrypted AES key for the client
+            "server_pubkey": get_server_pubkey_der(self.public_key).hex(), # Server's public key in DER format
+            "signature": aes_signature.hex(), # Signature of the AES key
+            "fingerprint": self.fingerprint, # Fingerprint of the server's public key
         }
         if DEBUG:
             print(f"Sending SESSION_INIT to {addr}: {response}")

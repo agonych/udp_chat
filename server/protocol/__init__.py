@@ -13,6 +13,7 @@ PACKET_REGISTRY = {
     "ACK": AckPacket,
     "HELLO": HelloPacket,
     "LOGIN": LoginPacket,
+    "LOGOUT": LogoutPacket,
     "STATUS": StatusPacket,
     "MERGE_SESSION": MergeSessionPacket,
     "LIST_ROOMS": ListRoomsPacket,
