@@ -83,7 +83,7 @@ You can change this for deployment or testing purposes.
 - `index.html`: Main HTML file
 - `package.json`: Project metadata and dependencies
 - `package-lock.json`: Dependency lock file
-- `vite.config.js`: Vite configuration file
+- `vite.config.mjs`: Vite configuration file
 
 ## Dependencies
 
