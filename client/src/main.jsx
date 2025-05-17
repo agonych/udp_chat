@@ -21,8 +21,6 @@ import { ThemeProvider } from "@mui/material/styles";
 import theme from "./theme";
 import { AppProvider } from "./context/AppContext";
 
-import "./index.css";
-
 // Create a root element for rendering
 createRoot(document.getElementById("root")).render(
     <StrictMode>

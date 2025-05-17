@@ -42,8 +42,6 @@ function App() {
     useKeepAlive(); // Keep the session alive
     // Import context and hooks
     const { user, loading, currentRoom, logout } = useApp();
-
-    console.log("[App] User:", user);
     // Build the UI
     return (
         <Box

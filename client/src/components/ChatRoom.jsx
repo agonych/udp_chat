@@ -46,7 +46,7 @@ export default function ChatRoom() {
     const {
         currentRoom, setCurrentRoom,
         socket, sessionId, aesKey, user,
-        members, messages, setMessageInput, messageInput,
+        members, setMembers, messages, setMessages, setMessageInput, messageInput,
         aiMode, setAiMode
     } = useApp();
 
@@ -142,8 +142,10 @@ export default function ChatRoom() {
                 type: "LEAVE_ROOM",
                 data: { room_id: currentRoom.room_id }
             });
-            // Reset the current room
+            // Reset the room data
             setCurrentRoom(null);
+            setMembers([]);
+            setMessages([]);
         }
     };
 
