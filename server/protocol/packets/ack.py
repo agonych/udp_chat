@@ -7,7 +7,7 @@ Last Updated: 15/05/2025
 """
 
 from .base import BasePacket
-from server.config import DEBUG
+from config import DEBUG
 
 class AckPacket(BasePacket):
     """

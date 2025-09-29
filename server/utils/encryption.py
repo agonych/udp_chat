@@ -19,7 +19,7 @@ from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 # Get the server's private and public key paths from the config
-from server.config import PRIVATE_KEY_PATH, PUBLIC_KEY_PATH
+from config import PRIVATE_KEY_PATH, PUBLIC_KEY_PATH
 
 def load_or_create_server_keys():
     """

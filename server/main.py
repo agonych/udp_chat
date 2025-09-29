@@ -19,8 +19,7 @@ import signal
 import sys
 import os
 
-# Change the python path to include the parent directory
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+# No need to modify sys.path in Docker container
 
 def start(ip=None, port=None):
     """
@@ -30,7 +29,7 @@ def start(ip=None, port=None):
     :return: None
     """
     # Import the UDPChatServer class
-    from server.server import UDPChatServer
+    from server import UDPChatServer
     # Create an instance of the UDPChatServer
     server = UDPChatServer()
     # Bind the server stop method to the SIGTERM and SIGINT signals
@@ -44,7 +43,7 @@ def init_db():
     Function to initialize the database
     """
     # Import the init_db function from the db module
-    from server.db import init_db
+    from db import init_db
     # Initialize the database
     init_db()
 

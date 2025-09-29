@@ -7,7 +7,7 @@ Last Updated: 15/05/2025
 """
 
 from .base import BasePacket
-from server.db.models import Room
+from db.models import Room
 
 class ListMembersPacket(BasePacket):
     """
@@ -43,8 +43,19 @@ class ListMembersPacket(BasePacket):
         # Get the list of members in the room
         members = Room.get_members(db, room.id)
 
+        # Convert datetime fields to strings for JSON serialization
+        serialized_members = []
+        for member in members:
+            serialized_member = {
+                "user_id": member["user_id"],
+                "name": member["name"],
+                "is_admin": member["is_admin"],
+                "joined_at": int(member["joined_at"].timestamp()) if member["joined_at"] else None
+            }
+            serialized_members.append(serialized_member)
+
         # Return the list of members
         return {
             "type": "ROOM_MEMBERS",
-            "data": members # List of members in the room
+            "data": serialized_members # List of members in the room
         }

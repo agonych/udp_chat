@@ -25,3 +25,18 @@ class Member(BaseModel):
             is_admin=is_admin,
             joined_at=joined_at
         )
+
+    def insert(self, conn):
+        """
+        Override insert method for members table since it doesn't have an id column.
+        The members table uses a composite primary key (room_id, user_id).
+        """
+        fields = {k: v for k, v in self.as_dict().items() if v is not None}
+        keys = ", ".join(fields.keys())
+        placeholders = ", ".join("%s" for _ in fields)
+        values = tuple(fields.values())
+        query = f"INSERT INTO {self.get_table_name()} ({keys}) VALUES ({placeholders})"
+        with conn.cursor() as cur:
+            cur.execute(query, values)
+        # Members table doesn't have an id column, so return None
+        return None

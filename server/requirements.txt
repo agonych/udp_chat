@@ -2,3 +2,4 @@ cryptography~=44.0.2
 python-dotenv~=1.1.0
 openai~=1.78.1
 ollama~=0.4.8
+psycopg2-binary~=2.9.9

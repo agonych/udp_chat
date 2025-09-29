@@ -66,12 +66,12 @@ class BaseModel:
         :return: An instance of the model if found, otherwise None.
         """
         query = f"SELECT * FROM {cls.get_table_name()} WHERE "
-        query += " AND ".join([f"{k}=?" for k in where])
+        query += " AND ".join([f"{k}=%s" for k in where])
         values = tuple(where.values())
-        cur = conn.cursor()
-        cur.execute(query, values)
-        row = cur.fetchone()
-        return cls.from_row(row) if row else None
+        with conn.cursor() as cur:
+            cur.execute(query, values)
+            row = cur.fetchone()
+            return cls.from_row(row) if row else None
 
     @classmethod
     def find_all(cls, conn, **where):
@@ -87,18 +87,21 @@ class BaseModel:
 
         for key, value in where.items():
             if isinstance(value, (list, tuple)):
-                placeholders = ", ".join(["?"] * len(value))
+                if len(value) == 0:
+                    # Skip empty lists to avoid IN () syntax error
+                    continue
+                placeholders = ", ".join(["%s"] * len(value))
                 conditions.append(f"{key} IN ({placeholders})")
                 values.extend(value)
             else:
-                conditions.append(f"{key} = ?")
+                conditions.append(f"{key} = %s")
                 values.append(value)
 
         if conditions:
             query += " WHERE " + " AND ".join(conditions)
-        cur = conn.cursor()
-        cur.execute(query, tuple(values))
-        return [cls.from_row(r) for r in cur.fetchall()]
+        with conn.cursor() as cur:
+            cur.execute(query, tuple(values))
+            return [cls.from_row(r) for r in cur.fetchall()]
 
 
     def insert(self, conn):
@@ -109,14 +112,14 @@ class BaseModel:
         """
         fields = {k: v for k, v in self.as_dict().items() if v is not None}
         keys = ", ".join(fields.keys())
-        placeholders = ", ".join("?" for _ in fields)
+        placeholders = ", ".join("%s" for _ in fields)
         values = tuple(fields.values())
-        query = f"INSERT INTO {self.get_table_name()} ({keys}) VALUES ({placeholders})"
-        cur = conn.cursor()
-        cur.execute(query, values)
-        conn.commit()  # optional: ensure data is saved
-        self.id = cur.lastrowid  # set the object's id field
-        return self.id
+        query = f"INSERT INTO {self.get_table_name()} ({keys}) VALUES ({placeholders}) RETURNING id"
+        with conn.cursor() as cur:
+            cur.execute(query, values)
+            result = cur.fetchone()
+            self.id = result['id'] if result else None
+            return self.id
 
     @classmethod
     def update(cls, conn, pk_field, pk_value, **updates):
@@ -128,11 +131,11 @@ class BaseModel:
         :param updates: The fields to update and their new values.
         :return: None
         """
-        keys = ", ".join([f"{k}=?" for k in updates])
+        keys = ", ".join([f"{k}=%s" for k in updates])
         values = tuple(updates.values()) + (pk_value,)
-        query = f"UPDATE {cls.get_table_name()} SET {keys} WHERE {pk_field} = ?"
-        conn.execute(query, values)
-        conn.commit()
+        query = f"UPDATE {cls.get_table_name()} SET {keys} WHERE {pk_field} = %s"
+        with conn.cursor() as cur:
+            cur.execute(query, values)
 
     @classmethod
     def delete(cls, conn, **where):
@@ -143,7 +146,7 @@ class BaseModel:
         :return: None
         """
         query = f"DELETE FROM {cls.get_table_name()} WHERE "
-        query += " AND ".join([f"{k}=?" for k in where])
+        query += " AND ".join([f"{k}=%s" for k in where])
         values = tuple(where.values())
-        conn.execute(query, values)
-        conn.commit()
+        with conn.cursor() as cur:
+            cur.execute(query, values)

@@ -47,6 +47,12 @@ export async function sendEncrypted(payload, { socket, aesKey, sessionId }) {
 
     // Wrap the payload in a try-catch block to handle encryption errors
     try {
+        // Check if crypto.subtle is available (requires secure context)
+        if (!crypto.subtle) {
+            console.error("❌ crypto.subtle not available - requires secure context (HTTPS or localhost)");
+            return;
+        }
+        
         // Import the AES key for encryption
         const key = await crypto.subtle.importKey("raw", aesKeyBytes, "AES-GCM", false, ["encrypt"]);
         // Encrypt the payload using AES-GCM
@@ -101,6 +107,12 @@ export async function receiveEncrypted(message, { aesKey, handleSecurePayload, s
 
     // Wrap the decryption process in a try-catch block to handle errors
     try {
+        // Check if crypto.subtle is available (requires secure context)
+        if (!crypto.subtle) {
+            console.error("❌ crypto.subtle not available - requires secure context (HTTPS or localhost)");
+            return;
+        }
+        
         // Import the AES key for decryption
         const aesKeyBytes = hexToBytes(aesKey);
         // Convert the ciphertext from hex to bytes

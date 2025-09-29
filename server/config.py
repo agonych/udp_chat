@@ -28,8 +28,14 @@ STORAGE_DIR = str(get_dir(BASE_DIR, 'storage'))
 DB_DIR = str(get_dir(STORAGE_DIR, 'db'))
 KEY_DIR = str(get_dir(STORAGE_DIR, 'keys'))
 
-# Define path for database
-DB_PATH = os.path.join(DB_DIR, 'chat.db')
+# Database configuration - PostgreSQL
+DB_HOST = os.getenv('DB_HOST', 'localhost')
+DB_PORT = int(os.getenv('DB_PORT', 5432))
+DB_NAME = os.getenv('DB_NAME', 'udpchat')
+DB_USER = os.getenv('DB_USER', 'udpchat_user')
+DB_PASSWORD = os.getenv('DB_PASSWORD', 'udpchat_password')
+DB_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+
 # Define paths for keys
 PRIVATE_KEY_PATH = os.path.join(KEY_DIR, 'server_private_key.pem')
 PUBLIC_KEY_PATH = os.path.join(KEY_DIR, 'server_public_key.pem')

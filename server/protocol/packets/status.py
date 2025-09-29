@@ -8,7 +8,7 @@ Last Updated: 15/05/2025
 """
 
 from .base import BasePacket
-from server.db.models import Session, User, Room
+from db.models import Session, User, Room
 
 class StatusPacket(BasePacket):
     """

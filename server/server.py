@@ -24,12 +24,13 @@ import time # Import time for timestamp calculations
 import socket # Import socket for UDP communication
 import json # Import json for JSON encoding/decoding
 import threading # Import threading for handling concurrent connections
+from datetime import datetime
 
 from queue import Queue # Import Queue for thread-safe queue
-from server.db import get_connection # Import database connection function
-from server.db.models import Session, Nonce # Import Session and Nonce models
+from db import get_connection # Import database connection function
+from db.models import Session, Nonce # Import Session and Nonce models
 # import encryption functions for secure communication
-from server.utils.encryption import (
+from utils.encryption import (
     load_or_create_server_keys, # Load or create server keys
     generate_random_id, # Generate a random session ID
     generate_session_key, # Generate a session key
@@ -40,9 +41,9 @@ from server.utils.encryption import (
     generate_nonce, # Generate a nonce for secure communication
     encrypt_message # Encrypt messages using the session key
 )
-from server.dispatcher import UdpDispatcher
-from server.protocol import handle_packet # Import packet handling function
-from server.config import SERVER_IP, SERVER_PORT, BUFFER_SIZE, DEBUG # Import server config
+from dispatcher import UdpDispatcher
+from protocol import handle_packet # Import packet handling function
+from config import SERVER_IP, SERVER_PORT, BUFFER_SIZE, DEBUG # Import server config
 
 class UDPChatServer:
     """
@@ -63,14 +64,25 @@ class UDPChatServer:
         """
         Constructor for UDPChatServer.
         """
-        # Load or create server keys
-        self.private_key, self.public_key, self.fingerprint = load_or_create_server_keys()
-        # Initialize database connection
-        self.db = get_connection()
-        # Bind the shutdown event
-        self.shutdown_event = threading.Event()
-        self.dispatcher = UdpDispatcher(self)
-        self.db_queue = Queue()
+        try:
+            print("Loading server keys...")
+            # Load or create server keys
+            self.private_key, self.public_key, self.fingerprint = load_or_create_server_keys()
+            print("Server keys loaded successfully")
+            
+            print("Initializing database connection...")
+            # Initialize database connection
+            self.db = get_connection()
+            print("Database connection established")
+            
+            # Bind the shutdown event
+            self.shutdown_event = threading.Event()
+            self.dispatcher = UdpDispatcher(self)
+            self.db_queue = Queue()
+            print("UDPChatServer initialized successfully")
+        except Exception as e:
+            print(f"Error during server initialization: {e}")
+            raise
 
     def listen(self, ip=None, port=None):
         """
@@ -349,7 +361,7 @@ class UDPChatServer:
         }
 
         # Update session in the database with the current timestamp
-        now = int(time.time())
+        now = datetime.now()
         Session.update(self.db, "session_id", session_id, last_active_at=now)
 
         # Decrypt the message using the session key and nonce

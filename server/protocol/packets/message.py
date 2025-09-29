@@ -7,8 +7,8 @@ Last Updated: 15/05/2025
 """
 
 from .base import BasePacket
-from server.db.models import Room, Member, Message, Session, User
-import time
+from db.models import Room, Member, Message, Session, User
+from datetime import datetime
 
 class MessagePacket(BasePacket):
     """
@@ -59,12 +59,12 @@ class MessagePacket(BasePacket):
             user_id=self.session.user_id,
             content=content,
             is_announcement=False,
-            created_at=int(time.time())
+            created_at=datetime.now()
         )
         message.insert(db)
 
         # Update room activity
-        Room.update(db, "room_id", room.room_id, last_active_at=int(time.time()))
+        Room.update(db, "room_id", room.room_id, last_active_at=datetime.now())
 
         # Get all members of the room
         members = Room.get_member_ids(db, room.id)
@@ -82,7 +82,17 @@ class MessagePacket(BasePacket):
                 "user_id": user.user_id,
                 "name": user.name,
                 "content": content,
-                "timestamp": message.created_at
+                "timestamp": int(message.created_at.timestamp()) if message.created_at else None
             }
         }, session_ids)
-        return None
+        
+        # Return message confirmation packet
+        return {
+            "type": "MESSAGE_SENT",
+            "data": {
+                "message_id": message.id,
+                "room_id": room.room_id,
+                "content": content,
+                "timestamp": int(message.created_at.timestamp()) if message.created_at else None
+            }
+        }

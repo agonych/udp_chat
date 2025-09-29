@@ -8,8 +8,8 @@ Last Updated: 15/05/2025
 """
 
 from .base import BasePacket
-from server.db.models import Room, Member, Session, User
-from server.config import DEBUG
+from db.models import Room, Member, Session, User
+from config import DEBUG
 
 
 class LeaveRoomPacket(BasePacket):
@@ -78,7 +78,7 @@ class LeaveRoomPacket(BasePacket):
                     {
                         "room_id": room.room_id,
                         "name": room.name,
-                        "last_active_at": room.last_active_at
+                        "last_active_at": int(room.last_active_at.timestamp()) if room.last_active_at else None
                     }
                     for room in rooms
                 ]

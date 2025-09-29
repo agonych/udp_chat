@@ -7,8 +7,8 @@ Last Updated: 15/05/2025
 """
 
 from .base import BasePacket
-from server.db.models import Room, Member, Session, User
-import time
+from db.models import Room, Member, Session, User
+from datetime import datetime
 
 class JoinRoomPacket(BasePacket):
     """
@@ -58,14 +58,14 @@ class JoinRoomPacket(BasePacket):
             "user_id": user.user_id,
             "name": user.name,
             "is_admin": user.is_admin,
-            "joined_at": int(time.time())
+            "joined_at": int(datetime.now().timestamp())
         }
 
         # Add user as a member of the room
         Member(
             room_id=room.id,
             user_id=self.session.user_id,
-            joined_at=int(time.time())
+            joined_at=datetime.now()
         ).insert(db)
 
         # Get all room members

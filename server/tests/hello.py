@@ -14,8 +14,8 @@ from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-from server.utils.encryption import generate_nonce
-from server.config import SERVER_IP, SERVER_PORT
+from utils.encryption import generate_nonce
+from config import SERVER_IP, SERVER_PORT
 
 def run():
     """

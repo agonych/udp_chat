@@ -7,7 +7,7 @@ Last Updated: 15/05/2025
 """
 
 from .base import BasePacket
-from server.db.models import Room
+from db.models import Room
 
 class ListRoomsPacket(BasePacket):
     """
@@ -32,7 +32,7 @@ class ListRoomsPacket(BasePacket):
                 {
                     "room_id": room.room_id,
                     "name": room.name,
-                    "last_active_at": room.last_active_at
+                    "last_active_at": int(room.last_active_at.timestamp()) if room.last_active_at else None
                 }
                 for room in rooms
             ]

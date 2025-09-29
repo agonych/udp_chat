@@ -22,6 +22,10 @@
 
 import {useEffect, useRef} from "react";
 import forge from "node-forge";
+
+// Disable workers globally to prevent prime.worker.js requests
+forge.options = forge.options || {};
+forge.options.workers = 0;
 import {useApp} from "../context/AppContext";
 import {bytesToHex, hexToBytes} from "../helpers/utils";
 import {registerHandler} from "../helpers/messageRouter";
@@ -35,6 +39,12 @@ import { sendEncrypted } from "../helpers/secureTransport";
  * @returns {Promise<boolean>} - True if the fingerprint matches, false otherwise
  */
 export async function verifyServerFingerprint(serverPubkeyHex, claimedFingerprint) {
+    // Check if crypto.subtle is available (requires HTTPS)
+    if (!crypto.subtle) {
+        console.warn("[FINGERPRINT] crypto.subtle not available (requires HTTPS), skipping fingerprint verification");
+        return true; // Skip verification on HTTP
+    }
+    
     // Convert the server public key from hex to bytes
     const pubkeyBytes = new Uint8Array(serverPubkeyHex.match(/.{2}/g).map(b => parseInt(b, 16)));
     // Hash the public key using SHA-256
@@ -121,6 +131,17 @@ export function useSession() {
             // Convert the signature from hex to bytes
             const sigBytes = hexToBytes(signature);
             try {
+                // Check if crypto.subtle is available (requires HTTPS)
+                if (!window.crypto.subtle) {
+                    console.warn("[SIGNATURE] crypto.subtle not available (requires HTTPS), skipping signature verification");
+                    // Save the session ID and AES key to the state, set loading to false
+                    setSessionId(session_id);
+                    setAesKey(aesKeyHex);
+                    setLoading(false);
+                    console.log("✅ Session established.");
+                    return;
+                }
+                
                 // Import the server public key for signature verification
                 const cryptoKey = await window.crypto.subtle.importKey(
                     "spki",

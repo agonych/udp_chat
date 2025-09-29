@@ -7,12 +7,13 @@ Author: Andrej Kudriavcev
 Last Updated: 15/05/2025
 """
 import time
+from datetime import datetime
 
 from .base import BasePacket
-from server.db.models import Room, Member, Message, Session, User
-from server.utils.ai import gtp_get_ai_response, ollama_get_ai_response
+from db.models import Room, Member, Message, Session, User
+from utils.ai import gtp_get_ai_response, ollama_get_ai_response
 
-from server.config import AI_MODE
+from config import AI_MODE
 
 class AIMessagePacket(BasePacket):
     """
@@ -78,12 +79,12 @@ class AIMessagePacket(BasePacket):
             user_id=self.session.user_id,
             content=ai_text,
             is_announcement=True,
-            created_at=int(time.time())
+            created_at=datetime.now()
         )
         message.insert(db)
 
         # Update room activity
-        Room.update(db, "room_id", room.room_id, last_active_at=int(time.time()))
+        Room.update(db, "room_id", room.room_id, last_active_at=datetime.now())
 
         # Get all members of the room
         members = Room.get_member_ids(db, room.id)
@@ -102,7 +103,7 @@ class AIMessagePacket(BasePacket):
                     "user_id": user.user_id,
                     "name": user.name,
                     "content": ai_text,
-                    "timestamp": message.created_at
+                    "timestamp": int(message.created_at.timestamp()) if message.created_at else None
                 }
             }, session_ids)
 

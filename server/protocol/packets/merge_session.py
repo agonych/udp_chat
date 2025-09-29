@@ -7,7 +7,8 @@ Last Updated: 15/05/2025
 """
 
 from .base import BasePacket
-from server.db.models import Session, User, Room
+from db.models import Session, User, Room
+from datetime import datetime
 import time
 
 class MergeSessionPacket(BasePacket):
@@ -66,7 +67,7 @@ class MergeSessionPacket(BasePacket):
             pk_field="session_id",
             pk_value=self.session.session_id,
             user_id=user.id,
-            last_active_at=int(time.time())
+            last_active_at=datetime.now()
         )
 
         # Get the room data for the user

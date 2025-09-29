@@ -12,11 +12,12 @@ Last Updated: 15/05/2025
 """
 
 from .base import BasePacket
-from server.db.models import User, Session, Room
+from db.models import User, Session, Room
+from datetime import datetime
 import hashlib
 import uuid
 import time
-from server.utils.tools import is_valid_email
+from utils.tools import is_valid_email
 
 class LoginPacket(BasePacket):
     """
@@ -92,7 +93,7 @@ class LoginPacket(BasePacket):
             pk_field="session_id",
             pk_value=self.session.session_id,
             user_id=user.id,
-            last_active_at=int(time.time())
+            last_active_at=datetime.now()
         )
         # Get the room the user was last in
         room = Room.find_by_user(db, user.user_id)

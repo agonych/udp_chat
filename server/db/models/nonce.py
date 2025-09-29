@@ -21,3 +21,18 @@ class Nonce(BaseModel):
             session_id=session_id,
             nonce=nonce
         )
+    
+    def insert(self, conn):
+        """
+        Override insert method for nonces table since it doesn't have an id column.
+        The nonces table uses a composite primary key (session_id, nonce).
+        """
+        fields = {k: v for k, v in self.as_dict().items() if v is not None}
+        keys = ", ".join(fields.keys())
+        placeholders = ", ".join("%s" for _ in fields)
+        values = tuple(fields.values())
+        query = f"INSERT INTO {self.get_table_name()} ({keys}) VALUES ({placeholders})"
+        with conn.cursor() as cur:
+            cur.execute(query, values)
+        # Nonces table doesn't have an id column, so return None
+        return None

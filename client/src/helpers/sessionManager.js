@@ -18,8 +18,9 @@
 
 // Import necessary libraries and utilities
 import forge from "node-forge";
+import workerUrl from 'node-forge/dist/prime.worker.min.js?url';
 import { messageRouter } from "./messageRouter";
-import { WS_URL } from "../config";
+import { getWebSocketURL } from "../config";
 
 /**
  * Initialises a secure WebSocket session with the server.
@@ -32,13 +33,18 @@ export async function initSession({ setSocket, setLoading, keypairRef }) {
     // Set loading state to true
     setLoading(true);
 
+
     // Return a promise that resolves when the RSA key pair is generated
     return new Promise((resolve) => {
-        // Generate a 2048-bit RSA key pair using node-forge
-        forge.pki.rsa.generateKeyPair({ bits: 2048, workers: -1 }, (err, keypair) => {
+        const options = {
+            bits: 1024,
+            workers: -1,
+            workerScript: workerUrl
+        };
+
+        forge.pki.rsa.generateKeyPair(options, (err, keypair) => {
             // Check for errors during key generation
             if (err) {
-                // Log the error and set loading state to false
                 console.error("❌ RSA key generation failed:", err);
                 setLoading(false);
                 resolve(false);
@@ -54,7 +60,9 @@ export async function initSession({ setSocket, setLoading, keypairRef }) {
             const pubBase64 = btoa(pubDer);
             console.log("[WS] Public key (Base64):", pubBase64);
             // Create a new WebSocket connection to the server
-            const ws = new WebSocket(WS_URL);
+            const wsUrl = getWebSocketURL();
+            console.log("[WS] Attempting to connect to:", wsUrl);
+            const ws = new WebSocket(wsUrl);
             // Set the WebSocket connection to the state
             setSocket(ws);
             // Log the connection status
@@ -74,27 +82,26 @@ export async function initSession({ setSocket, setLoading, keypairRef }) {
                     const msg = JSON.parse(event.data);
                     // Send the message to the message router
                     messageRouter(msg);
-                } catch (err) {
-                    // Log an error if message parsing fails
-                    console.error("❌ Failed to parse message:", err);
+                } catch (error) {
+                    console.error("❌ Failed to parse WebSocket message:", error);
                 }
             };
 
-            // Set up WebSocket onerror event handler
-            ws.onerror = (err) => {
-                // Log the error and set loading state to false
-                console.error("[WS] Error:", err);
+            ws.onerror = (error) => {
+                console.error("❌ WebSocket error:", error);
                 setLoading(false);
-                resolve(false);
+                setSocket(null);
             };
 
             // Set up WebSocket onclose event handler
             ws.onclose = () => {
-                // Log the connection closure and set loading state to false
-                console.warn("[WS] Connection closed");
+                console.log("[WS] Connection closed");
+                setLoading(false);
+                setSocket(null);
             };
 
-            // Resolve the promise to indicate that the session has been initialised
+            // Set up WebSocket onerror event handler
+            setLoading(false);
             resolve(true);
         });
     });

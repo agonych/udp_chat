@@ -5,32 +5,87 @@ Author: Andrej Kudriavcev
 Last Updated: 15/05/2025
 """
 
-import sqlite3 # Importing sqlite3 for database operations
-from server.config import DB_PATH  # Importing DB_PATH from config for database path
+import psycopg2
+import psycopg2.extras
+from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+from config import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD, DB_URL
 
 def get_connection():
     """
-    Establishes a connection to the SQLite database.
-    :return: sqlite3.Connection object
+    Establishes a connection to the PostgreSQL database.
+    :return: psycopg2.Connection object
     """
-    # Connect to the database with a timeout of 5 seconds
-    conn = sqlite3.connect(DB_PATH, timeout=5)
-    # Set the row factory to return rows as dictionaries
-    conn.row_factory = sqlite3.Row
-    # Enable foreign key constraints
-    conn.execute("PRAGMA foreign_keys = ON")
-    # Return the connection object
-    return conn
+    try:
+        # Connect to the database
+        conn = psycopg2.connect(
+            host=DB_HOST,
+            port=DB_PORT,
+            database=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD
+        )
+        # Set the row factory to return rows as dictionaries
+        conn.cursor_factory = psycopg2.extras.RealDictCursor
+        # Enable autocommit for DDL operations
+        conn.autocommit = True
+        return conn
+    except psycopg2.Error as e:
+        print(f"Error connecting to PostgreSQL: {e}")
+        raise
+
+def create_database():
+    """
+    Creates the database if it doesn't exist.
+    :return: None
+    """
+    try:
+        # Connect to PostgreSQL server (not to specific database)
+        conn = psycopg2.connect(
+            host=DB_HOST,
+            port=DB_PORT,
+            database='postgres',  # Connect to default postgres database
+            user=DB_USER,
+            password=DB_PASSWORD
+        )
+        conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+        
+        with conn.cursor() as cur:
+            # Check if database exists
+            cur.execute(f"SELECT 1 FROM pg_database WHERE datname = '{DB_NAME}'")
+            exists = cur.fetchone()
+            
+            if not exists:
+                # Create database
+                cur.execute(f"CREATE DATABASE {DB_NAME}")
+                print(f"Database '{DB_NAME}' created successfully.")
+            else:
+                print(f"Database '{DB_NAME}' already exists.")
+                
+    except psycopg2.Error as e:
+        print(f"Error creating database: {e}")
+        raise
+    finally:
+        if conn:
+            conn.close()
 
 def init_db():
     """
-    Initialises the database by executing the schema.sql file.
+    Initialises the database by creating it and executing the schema.sql file.
     :return: None
     """
+    # First create the database if it doesn't exist
+    create_database()
+    
     # Use the get_connection function to establish a connection
     with get_connection() as conn:
-        print("Initialising database...")
+        print("Initialising database schema...")
         # Read the schema.sql file and execute its content
         with open('db/schema.sql', 'r') as f:
-            conn.executescript(f.read())
-        print("Database initialise complete.")
+            schema_sql = f.read()
+            # Split by semicolon and execute each statement
+            statements = [stmt.strip() for stmt in schema_sql.split(';') if stmt.strip()]
+            with conn.cursor() as cur:
+                for statement in statements:
+                    if statement:
+                        cur.execute(statement)
+        print("Database schema initialised successfully.")

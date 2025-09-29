@@ -5,8 +5,8 @@ Author: Andrej Kudriavcev
 Last Updated: 15/05/2025
 """
 
-from server.config import DEBUG
-from server.protocol.packets import *
+from config import DEBUG
+from protocol.packets import *
 
 # Map packet types to handler classes
 PACKET_REGISTRY = {

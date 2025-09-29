@@ -7,9 +7,10 @@ Last Updated: 15/05/2025
 """
 
 from .base import BasePacket
-from server.db.models import Room, Member
+from db.models import Room, Member
 import uuid
 import time
+from datetime import datetime
 
 class CreateRoomPacket(BasePacket):
     """
@@ -47,8 +48,8 @@ class CreateRoomPacket(BasePacket):
             room_id=str(uuid.uuid4().hex),
             name=name,
             is_private=False,
-            created_at=int(time.time()),
-            last_active_at=int(time.time())
+            created_at=datetime.now(),
+            last_active_at=datetime.now()
         )
         room.insert(db)
 
@@ -69,7 +70,7 @@ class CreateRoomPacket(BasePacket):
                 {
                     "room_id": room.room_id,
                     "name": room.name,
-                    "last_active_at": room.last_active_at
+                    "last_active_at": int(room.last_active_at.timestamp()) if room.last_active_at else None
                 }
                 for room in rooms
             ]

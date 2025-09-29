@@ -42,12 +42,12 @@ class Room(BaseModel):
         SELECT users.user_id, users.name, members.is_admin, members.joined_at
         FROM members
         JOIN users ON members.user_id = users.id
-        WHERE members.room_id = ?
+        WHERE members.room_id = %s
         ORDER BY users.name
         """
-        cur = conn.cursor()
-        cur.execute(query, (room_id,))
-        return [dict(row) for row in cur.fetchall()]
+        with conn.cursor() as cur:
+            cur.execute(query, (room_id,))
+            return [dict(row) for row in cur.fetchall()]
 
     @classmethod
     def get_member_ids(cls, conn, room_id):
@@ -60,11 +60,11 @@ class Room(BaseModel):
         query = """
         SELECT members.user_id
         FROM members
-        WHERE members.room_id = ?
+        WHERE members.room_id = %s
         """
-        cur = conn.cursor()
-        cur.execute(query, (room_id,))
-        return [dict(row) for row in cur.fetchall()]
+        with conn.cursor() as cur:
+            cur.execute(query, (room_id,))
+            return [dict(row) for row in cur.fetchall()]
 
     @classmethod
     def touch(cls, conn, room_id):
@@ -74,10 +74,10 @@ class Room(BaseModel):
         :param room_id: The ID of the room to update
         :return: None
         """
-        from time import time
-        query = f"UPDATE {cls.get_table_name()} SET last_active_at = ? WHERE room_id = ?"
-        conn.execute(query, (int(time()), room_id))
-        conn.commit()
+        from datetime import datetime
+        query = f"UPDATE {cls.get_table_name()} SET last_active_at = %s WHERE room_id = %s"
+        with conn.cursor() as cur:
+            cur.execute(query, (datetime.now(), room_id))
 
     @classmethod
     def exists_by_name(cls, conn, name):
@@ -87,10 +87,10 @@ class Room(BaseModel):
         :param name: The name of the room to check
         :return: True if the room exists, False otherwise
         """
-        query = f"SELECT 1 FROM {cls.get_table_name()} WHERE name = ?"
-        cur = conn.cursor()
-        cur.execute(query, (name,))
-        return cur.fetchone() is not None
+        query = f"SELECT 1 FROM {cls.get_table_name()} WHERE name = %s"
+        with conn.cursor() as cur:
+            cur.execute(query, (name,))
+            return cur.fetchone() is not None
 
     @classmethod
     def last_messages(cls, conn, room_id, limit=100):
@@ -106,14 +106,14 @@ class Room(BaseModel):
             FROM messages
             JOIN users ON messages.user_id = users.id
             WHERE messages.room_id = (
-                SELECT id FROM rooms WHERE room_id = ?
+                SELECT id FROM rooms WHERE room_id = %s
             )
             ORDER BY messages.created_at DESC
-            LIMIT ?
+            LIMIT %s
         """
-        cur = conn.cursor()
-        cur.execute(query, (room_id, limit))
-        return [dict(row) for row in cur.fetchall()]
+        with conn.cursor() as cur:
+            cur.execute(query, (room_id, limit))
+            return [dict(row) for row in cur.fetchall()]
 
     @classmethod
     def find_by_user(cls, conn, user_id):
@@ -128,12 +128,12 @@ class Room(BaseModel):
             FROM rooms
             JOIN members ON rooms.id = members.room_id
             WHERE members.user_id = (
-                SELECT id FROM users WHERE user_id = ?
+                SELECT id FROM users WHERE user_id = %s
             )
             ORDER BY rooms.last_active_at DESC
             LIMIT 1
         """
-        cur = conn.cursor()
-        cur.execute(query, (user_id,))
-        row = cur.fetchone()
-        return cls.from_row(row) if row else None
+        with conn.cursor() as cur:
+            cur.execute(query, (user_id,))
+            row = cur.fetchone()
+            return cls.from_row(row) if row else None

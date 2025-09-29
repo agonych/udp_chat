@@ -10,7 +10,8 @@ Last Updated: 15/05/2025
 """
 
 from .base import BasePacket
-from server.db.models import Session
+from db.models import Session
+from datetime import datetime
 import time
 
 class LogoutPacket(BasePacket):
@@ -35,7 +36,7 @@ class LogoutPacket(BasePacket):
             pk_field="session_id",
             pk_value=session.session_id,
             user_id=None,
-            last_active_at=int(time.time())
+            last_active_at=datetime.now()
         )
 
         return {

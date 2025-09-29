@@ -7,7 +7,7 @@ Last Updated: 15/05/2025
 """
 
 from .base import BasePacket
-from server.db.models import Room
+from db.models import Room
 
 class ListMessagesPacket(BasePacket):
     """
@@ -53,7 +53,7 @@ class ListMessagesPacket(BasePacket):
                     "user_id": row["sender_user_id"],
                     "name": row["sender_name"],
                     "content": row["content"],
-                    "timestamp": row["created_at"]
+                    "timestamp": int(row["created_at"].timestamp()) if row["created_at"] else None
                 }
                 for row in reversed(rows)  # oldest first
             ]

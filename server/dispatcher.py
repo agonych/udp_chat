@@ -20,7 +20,7 @@ import time # Import time for time-based operations
 import threading # Import threading for concurrent execution
 import uuid # Import uuid for unique message IDs
 
-from server.config import DEBUG
+from config import DEBUG
 
 MAX_RETRIES = 5 # Maximum number of retries for sending a message
 RETRY_INTERVAL = 2  # Interval in seconds between retries
