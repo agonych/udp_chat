@@ -26,7 +26,7 @@ services:
   # Python UDP Server (development with volume mounting)
   server:
     build:
-      context: ./server
+      context: ../server
       dockerfile: Dockerfile
     container_name: udpchat_server_dev
     environment:
@@ -56,7 +56,7 @@ services:
   # Node.js WebSocket Connector (development with volume mounting)
   connector:
     build:
-      context: ./connector
+      context: ../connector
       dockerfile: Dockerfile
     container_name: udpchat_connector_dev
     environment:
@@ -80,7 +80,7 @@ services:
   # React Client (development with volume mounting)
   client:
     build:
-      context: ./client
+      context: ../client
       dockerfile: Dockerfile.dev
     container_name: udpchat_client_dev
     ports:

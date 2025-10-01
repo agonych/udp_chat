@@ -5,9 +5,9 @@ services:
     image: postgres:15-alpine
     container_name: udpchat_postgresql
     environment:
-      POSTGRES_DB: udpchat
-      POSTGRES_USER: udpchat_user
-      POSTGRES_PASSWORD: udpchat_password
+      POSTGRES_DB: DB_NAME=${DB_NAME:-udpchat}
+      POSTGRES_USER: ${DB_USER:-udpchat_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-udpchat_password}
     ports:
       - "5432:5432"
     volumes:

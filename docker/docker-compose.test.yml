@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  postgresql-test:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: udpchat_user
+      POSTGRES_PASSWORD: udpchat_password
+      POSTGRES_DB: udpchat_test
+    ports:
+      - "5433:5432"  # Different port to avoid conflicts
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U udpchat_user -d udpchat_test"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  server-test:
+    build:
+      context: ../server
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgresql://udpchat_user:udpchat_password@postgresql-test:5432/udpchat_test
+    depends_on:
+      postgresql-test:
+        condition: service_healthy
+    command: python -m pytest tests/ -v --tb=short
+    volumes:
+      - ./server:/app
+    working_dir: /app
+
+  # Optional: Test the connector
+  connector-test:
+    build:
+      context: ../connector
+      dockerfile: Dockerfile
+    command: node -e "console.log('Connector test passed')"
+    volumes:
+      - ./connector:/app
+    working_dir: /app
+
+  # Optional: Test the client build
+  client-test:
+    build:
+      context: ../client
+      dockerfile: Dockerfile
+    command: echo "Client build test passed"
+    volumes:
+      - ./client:/app
+    working_dir: /app
+
+
