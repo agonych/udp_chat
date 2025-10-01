@@ -82,10 +82,14 @@ def init_db():
         # Read the schema.sql file and execute its content
         with open('db/schema.sql', 'r') as f:
             schema_sql = f.read()
-            # Split by semicolon and execute each statement
-            statements = [stmt.strip() for stmt in schema_sql.split(';') if stmt.strip()]
+            # Execute the entire schema as one statement to handle $$ delimiters
             with conn.cursor() as cur:
-                for statement in statements:
-                    if statement:
-                        cur.execute(statement)
+                try:
+                    cur.execute(schema_sql)
+                except Exception as e:
+                    # If schema already exists, that's okay for tests
+                    if "already exists" in str(e) or "duplicate" in str(e).lower():
+                        print(f"Schema already exists, continuing...")
+                    else:
+                        raise e
         print("Database schema initialised successfully.")

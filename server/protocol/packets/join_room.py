@@ -9,6 +9,7 @@ Last Updated: 15/05/2025
 from .base import BasePacket
 from db.models import Room, Member, Session, User
 from datetime import datetime
+from metrics import room_joins_total
 
 class JoinRoomPacket(BasePacket):
     """
@@ -67,6 +68,22 @@ class JoinRoomPacket(BasePacket):
             user_id=self.session.user_id,
             joined_at=datetime.now()
         ).insert(db)
+        
+        # Record room join
+        room_joins_total.inc()
+
+        # Notify the user's other sessions that they joined the room
+        user_sessions = Session.find_all(db, user_id=self.session.user_id)
+        user_session_ids = [s.session_id for s in user_sessions if s.session_id != self.session.session_id]
+        
+        if user_session_ids:
+            self.server.broadcast({
+                "type": "ROOM_JOINED",
+                "data": {
+                    "room_id": room.room_id,
+                    "room_name": room.name
+                }
+            }, user_session_ids)
 
         # Get all room members
         members = Room.get_member_ids(db, room.id)

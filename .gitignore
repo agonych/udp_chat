@@ -3,3 +3,10 @@
 __pycache__/
 server/storage/*
 */.env
+
+/terraform/terraform.tfvars
+/k8s/base/secret.yaml
+/terraform/.terraform/
+/terraform/.terraform.lock.hcl
+/terraform/terraform.tfstate
+/terraform/terraform.tfstate.backup

@@ -28,6 +28,13 @@ from datetime import datetime
 
 from queue import Queue # Import Queue for thread-safe queue
 from db import get_connection # Import database connection function
+from metrics import (
+    start_metrics_server, record_packet_processing_time, record_database_operation_time,
+    user_logins_total, user_logouts_total, rooms_created_total, rooms_deleted_total,
+    room_joins_total, room_leaves_total, messages_sent_total, ai_messages_sent_total,
+    udp_packets_processed_total, active_users, active_rooms, active_sessions,
+    packet_processing_time
+)
 from db.models import Session, Nonce # Import Session and Nonce models
 # import encryption functions for secure communication
 from utils.encryption import (
@@ -74,6 +81,10 @@ class UDPChatServer:
             # Initialize database connection
             self.db = get_connection()
             print("Database connection established")
+            
+            # Start Prometheus metrics server
+            # start_metrics_server()  # Temporarily disabled due to port conflict
+            print("Prometheus metrics server disabled")
             
             # Bind the shutdown event
             self.shutdown_event = threading.Event()
@@ -126,13 +137,16 @@ class UDPChatServer:
                     Session.cleanup(self.db)
                 # Receive data from the socket
                 data, addr = self.sock.recvfrom(BUFFER_SIZE) # Buffer size of 8192 bytes
+                # Increment UDP packets processed counter
+                udp_packets_processed_total.inc()
                 # Decode the data and parse it as JSON
                 try:
                     message = json.loads(data.decode())
                     if DEBUG:
                         print(f"Received message from {addr}: {message['type']}")
                     # Call the handle_message method to process the received message
-                    self.handle_message(message, addr)
+                    with packet_processing_time.time():
+                        self.handle_message(message, addr)
                 except Exception as e:
                     self.handle_error(f"Packet processing failure: {e}", addr)
             # If 1 second timeout occurs

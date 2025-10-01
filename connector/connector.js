@@ -24,11 +24,29 @@ require('dotenv').config(); // Load environment variables from .env file
 const dgram = require('dgram'); // UDP socket library
 const WebSocket = require('ws'); // WebSocket library
 const { v4: uuidv4 } = require('uuid'); // UUID library for generating unique session IDs
+const { register, websocketConnections, websocketMessagesReceived, websocketMessagesSent, udpMessagesReceived, udpMessagesSent, messageProcessingTime } = require('./metrics');
 
 const UDP_SERVER_HOST = process.env.UDP_SERVER_HOST || '127.0.0.1'; // UDP server host
 const UDP_SERVER_PORT = parseInt(process.env.UDP_SERVER_PORT, 10) || 9999; // UDP server port
 const WS_PORT = parseInt(process.env.WS_PORT, 10) || 8000; // WebSocket server port
+const METRICS_PORT = parseInt(process.env.METRICS_PORT, 10) || 3000; // Metrics server port
 const INACTIVITY_TIMEOUT_MS = parseInt(process.env.INACTIVITY_TIMEOUT_MS, 10) || 600000; // 10 minutes
+
+// Create HTTP server for metrics
+const http = require('http');
+const metricsServer = http.createServer(async (req, res) => {
+  if (req.url === '/metrics') {
+    res.setHeader('Content-Type', register.contentType);
+    res.end(await register.metrics());
+  } else {
+    res.statusCode = 404;
+    res.end('Not found');
+  }
+});
+
+metricsServer.listen(METRICS_PORT, () => {
+  console.log(`[Bridge] Metrics server listening on http://localhost:${METRICS_PORT}/metrics`);
+});
 
 // Create a UDP socket for sending messages to the UDP server
 const wss = new WebSocket.Server({ port: WS_PORT });
@@ -86,6 +104,9 @@ wss.on('connection', (ws) => {
     const sessionId = uuidv4();
     console.log(`[<<<] WebSocket client connected (session: ${sessionId})`);
 
+    // Increment WebSocket connections counter
+    websocketConnections.inc();
+
     // Set up a message handler for the WebSocket connection
     const udpSocket = dgram.createSocket('udp4');
     // Bind the UDP socket to a random (not specified) port
@@ -98,9 +119,13 @@ wss.on('connection', (ws) => {
     // Set up a message handler for incoming UDP messages
     udpSocket.on('message', (msg) => {
         console.log(`[>>>] UDP message from server (session: ${sessionId})`);
+        // Increment UDP messages received counter
+        udpMessagesReceived.inc();
         // Send the UDP message to the WebSocket client
         if (ws.readyState === WebSocket.OPEN) {
             ws.send(msg.toString());
+            // Increment WebSocket messages sent counter
+            websocketMessagesSent.inc();
             // Reset the inactivity timeout for the session
             resetTimeout(sessionId);
         }
@@ -109,8 +134,12 @@ wss.on('connection', (ws) => {
     // Set up a message handler for incoming WebSocket messages
     ws.on('message', (data) => {
         console.log(`[<<<] Message from WebSocket client (session: ${sessionId})`);
+        // Increment WebSocket messages received counter
+        websocketMessagesReceived.inc();
         // Send the message to the UDP server
         udpSocket.send(data, UDP_SERVER_PORT, UDP_SERVER_HOST);
+        // Increment UDP messages sent counter
+        udpMessagesSent.inc();
         console.log(`[>>>] Forwarded message to UDP server (session: ${sessionId})`);
         resetTimeout(sessionId);
     });
@@ -118,6 +147,8 @@ wss.on('connection', (ws) => {
     // Set up a close handler for the WebSocket connection
     ws.on('close', () => {
         console.log(`[XXX] WebSocket closed (session: ${sessionId})`);
+        // Decrement WebSocket connections counter
+        websocketConnections.dec();
         // Clean up the session when the WebSocket connection is closed
         cleanupSession(sessionId);
     });

@@ -1,0 +1,17 @@
+# Test-specific requirements
+# This file contains only the dependencies needed for testing
+
+# Core dependencies (minimal set for testing)
+psycopg2-binary~=2.9.9
+prometheus-client~=0.20.0
+
+# Testing framework
+pytest~=8.0.0
+pytest-asyncio~=0.23.0
+pytest-cov~=4.1.0  # For coverage reporting
+
+# Optional: Additional testing utilities
+factory-boy~=3.3.0  # For test data factories
+faker~=20.1.0       # For generating fake data
+
+

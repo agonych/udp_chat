@@ -13,17 +13,33 @@
  * Last Updated: 15/05/2025
  */
 
-// Dynamic WebSocket URL based on current hostname
+// Dynamic WebSocket URL based on environment variables
 export const getWebSocketURL = () => {
+  // Check for explicit WebSocket URL first
   if (import.meta.env.VITE_WS_URL) {
     console.log("[CONFIG] Using environment WebSocket URL:", import.meta.env.VITE_WS_URL);
     return import.meta.env.VITE_WS_URL;
   }
   
-  // Use current hostname and protocol for WebSocket connection
+  // Use connector service details from environment variables
+  const wsHost = import.meta.env.VITE_WS_HOST || window.location.hostname;
+  const wsPort = import.meta.env.VITE_WS_PORT;
+  const wsPath = import.meta.env.VITE_WS_PATH || '/ws';
+  
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const hostname = window.location.hostname;
-  const wsUrl = `${protocol}//${hostname}/ws`;
+  
+  // Build WebSocket URL
+  let wsUrl;
+  if (wsPort) {
+    // Use explicit host:port configuration (for direct connector access)
+    wsUrl = `${protocol}//${wsHost}:${wsPort}${wsPath}`;
+  } else {
+    // Fallback to same host with path (for nginx proxy setups)
+    // For nginx proxy, use the same host and port as the current page
+    const currentPort = window.location.port ? `:${window.location.port}` : '';
+    wsUrl = `${protocol}//${wsHost}${currentPort}${wsPath}`;
+  }
+  
   console.log("[CONFIG] Generated WebSocket URL:", wsUrl);
   return wsUrl;
 };

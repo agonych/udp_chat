@@ -27,8 +27,8 @@ RUN useradd --create-home --shell /bin/bash app && \
     chown -R app:app /app
 USER app
 
-# Expose port
-EXPOSE 9999
+# Expose ports
+EXPOSE 9999 8000
 
 # Health check removed - server runs in foreground
 

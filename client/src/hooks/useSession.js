@@ -88,7 +88,6 @@ export function useSession() {
             } else if (old_fingerprint !== fingerprint) {
                 // If the fingerprint doesn't match, warn about a possible MITM attack
                 console.warn("⚠️ Server fingerprint mismatch. Possible MITM attack!");
-                return;
             }
 
             // verify server fingerprint

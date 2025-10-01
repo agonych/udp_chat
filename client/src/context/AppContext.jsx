@@ -106,12 +106,45 @@ export const AppProvider = ({ children }) => {
                 setLoading(false);
                 break;
             case "STATUS":
-                // Handle status messages - update user status
+                // Handle status messages - update user status and sync room state
                 if (payload.data.user && Object.keys(payload.data.user).length > 0) {
                     setUser(payload.data.user);
+                    
+                    // Room synchronization failover
+                    const serverRoom = payload.data.user.room;
+                    const currentRoomId = currentRoom?.room_id;
+                    
+                    if (serverRoom && serverRoom.room_id !== currentRoomId) {
+                        // Server says user is in a different room - sync to that room
+                        console.log(`Room sync: Server says user is in room ${serverRoom.room_id} (${serverRoom.name}), but client thinks user is in room ${currentRoomId}. Syncing...`);
+                        setCurrentRoom({
+                            room_id: serverRoom.room_id,
+                            name: serverRoom.name
+                        });
+                        setMembers([]);
+                        setMessages([]);
+                        setMessageInput("");
+                        
+                        // Request room members and messages to refresh the UI
+                        if (socket && sessionId && aesKey) {
+                            sendEncrypted({ type: "LIST_MEMBERS" }, { socket, sessionId, aesKey });
+                            sendEncrypted({ type: "LIST_MESSAGES" }, { socket, sessionId, aesKey });
+                        }
+                    } else if (!serverRoom && currentRoom) {
+                        // Server says user is not in any room, but client thinks they are - clear room state
+                        console.log(`Room sync: Server says user is not in any room, but client thinks user is in room ${currentRoomId}. Clearing room state...`);
+                        setCurrentRoom(null);
+                        setMembers([]);
+                        setMessages([]);
+                        setMessageInput("");
+                    }
                 } else {
                     // If the user is null or empty, clear the user state
                     setUser(null);
+                    setCurrentRoom(null);
+                    setMembers([]);
+                    setMessages([]);
+                    setMessageInput("");
                 }
                 break;
             case "PLEASE_LOGIN":
@@ -200,6 +233,27 @@ export const AppProvider = ({ children }) => {
                         return prevMembers.filter(member => member.user_id !== payload.data.member_id);
                     });
                 }
+                break;
+            case "ROOM_LEFT":
+                // Handle room leave - clear current room state
+                if (payload.data.room_id === currentRoom?.room_id) {
+                    setCurrentRoom(null);
+                    setMembers([]);
+                    setMessages([]);
+                    setMessageInput("");
+                    console.log(`Left room: ${payload.data.room_name}`);
+                }
+                break;
+            case "ROOM_JOINED":
+                // Handle room join - update current room state
+                setCurrentRoom({
+                    room_id: payload.data.room_id,
+                    name: payload.data.room_name
+                });
+                setMembers([]);
+                setMessages([]);
+                setMessageInput("");
+                console.log(`Joined room: ${payload.data.room_name}`);
                 break;
             default:
                 // Unknown message type - log a warning

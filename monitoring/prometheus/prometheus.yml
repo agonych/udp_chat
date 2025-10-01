@@ -1,0 +1,33 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # UDP Chat Server
+  - job_name: 'udpchat-server'
+    static_configs:
+      - targets: ['server:8000']
+    scrape_interval: 5s
+    metrics_path: '/metrics'
+
+  # UDP Chat Connector
+  - job_name: 'udpchat-connector'
+    static_configs:
+      - targets: ['connector:3000']
+    scrape_interval: 5s
+    metrics_path: '/metrics'
+
+  # Node Exporter (system metrics)
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+

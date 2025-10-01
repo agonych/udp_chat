@@ -18,6 +18,7 @@ import hashlib
 import uuid
 import time
 from utils.tools import is_valid_email
+from metrics import user_logins_total, active_users
 
 class LoginPacket(BasePacket):
     """
@@ -95,6 +96,10 @@ class LoginPacket(BasePacket):
             user_id=user.id,
             last_active_at=datetime.now()
         )
+        
+        # Record successful login
+        user_logins_total.inc()
+        active_users.inc()
         # Get the room the user was last in
         room = Room.find_by_user(db, user.user_id)
         if room:

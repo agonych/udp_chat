@@ -101,7 +101,6 @@ export async function initSession({ setSocket, setLoading, keypairRef }) {
             };
 
             // Set up WebSocket onerror event handler
-            setLoading(false);
             resolve(true);
         });
     });

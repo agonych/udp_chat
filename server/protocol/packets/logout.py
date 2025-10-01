@@ -13,6 +13,7 @@ from .base import BasePacket
 from db.models import Session
 from datetime import datetime
 import time
+from metrics import user_logouts_total, active_users
 
 class LogoutPacket(BasePacket):
     """
@@ -38,6 +39,10 @@ class LogoutPacket(BasePacket):
             user_id=None,
             last_active_at=datetime.now()
         )
+        
+        # Record logout
+        user_logouts_total.inc()
+        active_users.dec()
 
         return {
             "type": "STATUS",

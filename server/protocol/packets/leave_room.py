@@ -10,6 +10,7 @@ Last Updated: 15/05/2025
 from .base import BasePacket
 from db.models import Room, Member, Session, User
 from config import DEBUG
+from metrics import room_leaves_total, rooms_deleted_total, active_rooms
 
 
 class LeaveRoomPacket(BasePacket):
@@ -45,9 +46,27 @@ class LeaveRoomPacket(BasePacket):
 
         # Remove the user from the room
         Member.delete(db, room_id=room.id, user_id=self.session.user_id)
+        
+        # Record room leave
+        room_leaves_total.inc()
+
+        # Get user info
+        user = User.find_one(db, id=self.session.user_id)
+        
+        # Notify the user's other sessions that they left the room
+        user_sessions = Session.find_all(db, user_id=self.session.user_id)
+        user_session_ids = [s.session_id for s in user_sessions if s.session_id != self.session.session_id]
+        
+        if user_session_ids:
+            self.server.broadcast({
+                "type": "ROOM_LEFT",
+                "data": {
+                    "room_id": room.room_id,
+                    "room_name": room.name
+                }
+            }, user_session_ids)
 
         # Notify remaining members
-        user = User.find_one(db, id=self.session.user_id)
         members = Room.get_member_ids(db, room.id)
         if members:
             sessions = Session.find_all(db, user_id=[m["user_id"] for m in members])
@@ -65,6 +84,11 @@ class LeaveRoomPacket(BasePacket):
         else:
             # No members left in the room, delete it
             Room.delete(db, room_id=room.room_id)
+            
+            # Record room deletion
+            rooms_deleted_total.inc()
+            active_rooms.dec()
+            
             if DEBUG:
                 print(f"Room '{room.name}' deleted because it has no members.")
 

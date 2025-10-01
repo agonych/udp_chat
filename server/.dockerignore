@@ -47,8 +47,8 @@ README.md
 .env
 .env.*
 
-# Test files
-tests/
+# Test files (keep tests/ for Docker testing)
+# tests/
 test_*.py
 
 # Logs

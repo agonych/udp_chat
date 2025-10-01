@@ -21,8 +21,8 @@ RUN addgroup -g 1001 -S nodejs && \
 RUN chown -R connector:nodejs /app
 USER connector
 
-# Expose port
-EXPOSE 8000
+# Expose ports
+EXPOSE 8000 3000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \

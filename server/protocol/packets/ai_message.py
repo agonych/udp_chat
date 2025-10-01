@@ -12,6 +12,7 @@ from datetime import datetime
 from .base import BasePacket
 from db.models import Room, Member, Message, Session, User
 from utils.ai import gtp_get_ai_response, ollama_get_ai_response
+from metrics import ai_messages_sent_total
 
 from config import AI_MODE
 
@@ -94,6 +95,9 @@ class AIMessagePacket(BasePacket):
         session_ids = [s.session_id for s in sessions]
 
         if session_ids:
+            # Record AI message sent
+            ai_messages_sent_total.inc()
+            
             # Broadcast the AI message to all active sessions in the room
             self.server.broadcast({
                 "type": "MESSAGE",

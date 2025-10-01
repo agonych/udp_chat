@@ -11,6 +11,7 @@ from db.models import Room, Member
 import uuid
 import time
 from datetime import datetime
+from metrics import rooms_created_total, active_rooms
 
 class CreateRoomPacket(BasePacket):
     """
@@ -52,6 +53,10 @@ class CreateRoomPacket(BasePacket):
             last_active_at=datetime.now()
         )
         room.insert(db)
+        
+        # Record room creation
+        rooms_created_total.inc()
+        active_rooms.inc()
 
         # Add user as room admin
         Member(
