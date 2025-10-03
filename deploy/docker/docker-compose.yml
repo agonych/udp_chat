@@ -89,6 +89,10 @@ services:
     build:
       context: ../../client
       dockerfile: Dockerfile
+      args:
+        VITE_WS_HOST: localhost
+        VITE_WS_PORT: ${CONNECTOR_PORT:-8001}
+        VITE_WS_PATH: /ws
     container_name: udpchat_client
     ports:
       - "${CLIENT_PORT:-3000}:80"

@@ -1,0 +1,41 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: udpchat
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - secret.yaml
+  - postgresql.yaml
+  - server.yaml
+  - connector.yaml
+  - client.yaml
+  - prometheus.yaml
+  - grafana.yaml
+  - ingress.yaml
+
+# Apply patches for local development
+patches:
+  - target:
+      kind: Deployment
+      name: client
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/env
+        value:
+          - name: VITE_WS_HOST
+            value: "localhost"
+          - name: VITE_WS_PORT
+            value: "8001"
+          - name: VITE_WS_PATH
+            value: "/ws"
+
+# Image tags for local development
+images:
+  - name: server
+    newTag: latest
+  - name: connector
+    newTag: latest
+  - name: client
+    newTag: latest

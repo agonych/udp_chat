@@ -18,23 +18,13 @@ output "acr_login_server" {
   value       = azurerm_container_registry.acr.login_server
 }
 
-output "key_vault_name" {
-  description = "Azure Key Vault name (for secrets)"
-  value       = azurerm_key_vault.kv.name
-}
-
-output "aoai_endpoint" {
-  description = "Azure OpenAI endpoint (deploy models via CLI in CI)"
-  value       = azurerm_cognitive_account.aoai.endpoint
-}
-
 output "postgres_fqdn" {
   description = "PostgreSQL Flexible Server FQDN"
   value       = azurerm_postgresql_flexible_server.pg.fqdn
 }
 
 output "ingress_ip" {
-  description = "Static IP address for ingress controller"
+  description = "Static IP address for wildcard ingress controller"
   value       = azurerm_public_ip.ingress.ip_address
 }
 

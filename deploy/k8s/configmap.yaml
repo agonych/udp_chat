@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: udpchat
+data:
+  DB_NAME: "udpchat"
+  DB_USER: "udpchat_user"
+  DB_PORT: "5432"
+  SERVER_PORT: "9999"
+  CONNECTOR_WS_PORT: "8001"
+  CONNECTOR_METRICS_PORT: "3000"
+  CLIENT_PORT: "3000"
+  DEBUG: "False"
+  AI_MODE: "gpt"

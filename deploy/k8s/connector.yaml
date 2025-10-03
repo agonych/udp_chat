@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: connector
+  namespace: udpchat
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: connector
+  template:
+    metadata:
+      labels:
+        app: connector
+    spec:
+      containers:
+      - name: connector
+        image: connector:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8001
+          name: ws
+        - containerPort: 3000
+          name: metrics
+        env:
+        - name: UDP_SERVER_HOST
+          value: "server"
+        - name: UDP_SERVER_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: SERVER_PORT
+        - name: WS_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: CONNECTOR_WS_PORT
+        - name: INACTIVITY_TIMEOUT_MS
+          value: "600000"
+        livenessProbe:
+          tcpSocket:
+            port: 8001
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          tcpSocket:
+            port: 8001
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: connector
+  namespace: udpchat
+spec:
+  selector:
+    app: connector
+  ports:
+  - port: 8001
+    targetPort: 8001
+    nodePort: 30003
+    name: ws
+  - port: 3000
+    targetPort: 3000
+    nodePort: 30004
+    name: metrics
+  type: NodePort

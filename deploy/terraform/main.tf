@@ -34,7 +34,7 @@ resource "azurerm_kubernetes_cluster" "aks" {
   }
 }
 
-# Reserve static public IP for ingress controller
+# Reserve static public IP for wildcard ingress controller
 resource "azurerm_public_ip" "ingress" {
   name                = "${var.prefix}-ingress-ip"
   resource_group_name = azurerm_kubernetes_cluster.aks.node_resource_group
@@ -43,8 +43,17 @@ resource "azurerm_public_ip" "ingress" {
   sku                 = "Standard"
   
   tags = {
-    service = "ingress-nginx"
+    service = "wildcard-ingress"
   }
+}
+
+# Create wildcard DNS record
+resource "azurerm_dns_a_record" "wildcard" {
+  name                = "*"
+  zone_name           = data.azurerm_dns_zone.chat.name
+  resource_group_name = data.azurerm_resource_group.rg.name
+  ttl                 = 60
+  records             = [azurerm_public_ip.ingress.ip_address]
 }
 
 # Allow AKS to pull images from ACR (AcrPull)
@@ -95,8 +104,6 @@ resource "azurerm_postgresql_flexible_server" "pg" {
   authentication {
     password_auth_enabled = true
   }
-  
-  # No zone specified - let Azure choose available zone
 }
 
 # Application database
@@ -107,7 +114,7 @@ resource "azurerm_postgresql_flexible_server_database" "appdb" {
   charset   = "UTF8"
 }
 
-# Simple, permissive firewall for initial connectivity.
+# Simple, permissive firewall for initial connectivity to Postgres
 # WARNING: This is wide-open. Must be locked down before production use.
 resource "azurerm_postgresql_flexible_server_firewall_rule" "allow_all" {
   name      = "allow-all-for-initial-setup"
@@ -116,27 +123,9 @@ resource "azurerm_postgresql_flexible_server_firewall_rule" "allow_all" {
   end_ip_address   = "255.255.255.255"
 }
 
-# Store the Postgres admin password in Key Vault
-resource "azurerm_key_vault_secret" "pg_admin_password" {
-  name         = "PG-ADMIN-PASSWORD"
-  value        = var.pg_admin_password
-  key_vault_id = azurerm_key_vault.kv.id
-  depends_on = [ azurerm_role_assignment.kv_secrets_officer ]
-}
-
-# Azure OpenAI resource (models are deployed separately via Azure CLI in CI)
-# Note: OpenAI not available in all regions - using Australia East instead
-resource "azurerm_cognitive_account" "aoai" {
-  name                = "${var.prefix}aoai"
-  resource_group_name = data.azurerm_resource_group.rg.name
-  location            = "australiaeast"  # OpenAI available in australiaeast, not australiasoutheast
-  kind                = "OpenAI"
-  sku_name            = "S0"
-}
-
-# Get the existing DNS zone (assumes chat.kudriavcev.info exists)
+# Get the DNS zone (must exist in Azure DNS of the account)
 data "azurerm_dns_zone" "chat" {
-  name                = "chat.kudriavcev.info"
+  name                = var.project_dns_zone
   resource_group_name = data.azurerm_resource_group.rg.name
 }
 

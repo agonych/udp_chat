@@ -61,3 +61,9 @@ variable "pg_database_name" {
   type        = string
   default     = "udpchat"
 }
+
+variable "project_dns_zone" {
+  description = "DNS zone for the project (e.g. example.com)"
+  type        = string
+  default     = "example.com"
+}

@@ -1,0 +1,133 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: server
+  namespace: udpchat
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: server
+  template:
+    metadata:
+      labels:
+        app: server
+    spec:
+      initContainers:
+      - name: wait-for-postgres
+        image: postgres:15-alpine
+        command:
+        - sh
+        - -c
+        - |
+          until pg_isready -h postgresql -p 5432 -U udpchat_user; do
+            echo "Waiting for PostgreSQL to be ready..."
+            sleep 2
+          done
+          echo "PostgreSQL is ready!"
+      containers:
+      - name: server
+        image: server:latest
+        imagePullPolicy: IfNotPresent
+        command: ["sh", "-c", "python main.py init_db && exec python main.py start"]
+        ports:
+        - containerPort: 9999
+          name: udp
+          protocol: UDP
+        - containerPort: 8000
+          name: metrics
+        env:
+        - name: DB_HOST
+          value: "postgresql"
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: DB_PORT
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: DB_NAME
+        - name: DB_USER
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: DB_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: DB_PASSWORD
+        - name: SERVER_IP
+          value: "0.0.0.0"
+        - name: SERVER_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: SERVER_PORT
+        - name: DEBUG
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: DEBUG
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: OPENAI_API_KEY
+        - name: AI_MODE
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: AI_MODE
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - "python3 -c \"import socket; s=socket.socket(socket.AF_INET, socket.SOCK_DGRAM); s.settimeout(5); s.sendto(b'{\\\"type\\\":\\\"PING\\\"}', ('localhost', 9999)); s.close(); print('UDP server responding')\""
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - "python3 -c \"import socket; s=socket.socket(socket.AF_INET, socket.SOCK_DGRAM); s.settimeout(5); s.sendto(b'{\\\"type\\\":\\\"PING\\\"}', ('localhost', 9999)); s.close(); print('UDP server responding')\""
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        volumeMounts:
+        - name: server-storage
+          mountPath: /app/storage
+      volumes:
+      - name: server-storage
+        emptyDir: {}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: server
+  namespace: udpchat
+spec:
+  selector:
+    app: server
+  ports:
+  - port: 9999
+    targetPort: 9999
+    nodePort: 30001
+    name: udp
+    protocol: UDP
+  - port: 8000
+    targetPort: 8000
+    nodePort: 30002
+    name: metrics
+  type: NodePort

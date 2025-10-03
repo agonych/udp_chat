@@ -1,0 +1,27 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: udpchat-ingress
+  namespace: udpchat
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/websocket-services: "connector"
+spec:
+  rules:
+  - host: localhost
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: client
+            port:
+              number: 80
+      - path: /ws
+        pathType: Prefix
+        backend:
+          service:
+            name: connector
+            port:
+              number: 8001

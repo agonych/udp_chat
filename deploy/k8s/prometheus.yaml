@@ -1,0 +1,140 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: udpchat
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      containers:
+      - name: prometheus
+        image: prom/prometheus:latest
+        ports:
+        - containerPort: 9090
+          name: web
+        args:
+        - '--config.file=/etc/prometheus/prometheus.yml'
+        - '--storage.tsdb.path=/prometheus'
+        - '--web.console.libraries=/etc/prometheus/console_libraries'
+        - '--web.console.templates=/etc/prometheus/consoles'
+        - '--storage.tsdb.retention.time=200h'
+        - '--web.enable-lifecycle'
+        volumeMounts:
+        - name: prometheus-config
+          mountPath: /etc/prometheus
+        - name: prometheus-storage
+          mountPath: /prometheus
+        - name: monitoring-config
+          mountPath: /etc/prometheus/monitoring
+          readOnly: true
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+      volumes:
+      - name: prometheus-config
+        configMap:
+          name: prometheus-config
+      - name: prometheus-storage
+        emptyDir: {}
+      - name: monitoring-config
+        configMap:
+          name: monitoring-config
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  namespace: udpchat
+spec:
+  selector:
+    app: prometheus
+  ports:
+  - port: 9090
+    targetPort: 9090
+    nodePort: 30005
+    name: web
+  type: NodePort
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: udpchat
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+
+    rule_files:
+      # - "first_rules.yml"
+      # - "second_rules.yml"
+
+    scrape_configs:
+      # Prometheus itself
+      - job_name: 'prometheus'
+        static_configs:
+          - targets: ['localhost:9090']
+
+      # UDP Chat Server
+      - job_name: 'udpchat-server'
+        static_configs:
+          - targets: ['server:8000']
+        scrape_interval: 5s
+        metrics_path: '/metrics'
+
+      # UDP Chat Connector
+      - job_name: 'udpchat-connector'
+        static_configs:
+          - targets: ['connector:3000']
+        scrape_interval: 5s
+        metrics_path: '/metrics'
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: monitoring-config
+  namespace: udpchat
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+
+    rule_files:
+      # - "first_rules.yml"
+      # - "second_rules.yml"
+
+    scrape_configs:
+      # Prometheus itself
+      - job_name: 'prometheus'
+        static_configs:
+          - targets: ['localhost:9090']
+
+      # UDP Chat Server
+      - job_name: 'udpchat-server'
+        static_configs:
+          - targets: ['server:8000']
+        scrape_interval: 5s
+        metrics_path: '/metrics'
+
+      # UDP Chat Connector
+      - job_name: 'udpchat-connector'
+        static_configs:
+          - targets: ['connector:3000']
+        scrape_interval: 5s
+        metrics_path: '/metrics'
