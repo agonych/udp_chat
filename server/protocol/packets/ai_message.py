@@ -74,6 +74,10 @@ class AIMessagePacket(BasePacket):
             # Error, AI generation failed
             return self.handle_error(f"AI generation failed: {e}")
 
+        # Check if AI generation returned a valid response
+        if not ai_text or ai_text.strip() == "":
+            return self.handle_error("AI generation failed: No response received.")
+
         # Save AI message to DB
         message = Message(
             room_id=room.id,

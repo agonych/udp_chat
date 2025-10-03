@@ -4,9 +4,14 @@ __pycache__/
 server/storage/*
 */.env
 
-/terraform/terraform.tfvars
-/k8s/base/secret.yaml
-/terraform/.terraform/
-/terraform/.terraform.lock.hcl
-/terraform/terraform.tfstate
-/terraform/terraform.tfstate.backup
+/deploy/docker/.env
+
+/deploy/scripts/.env
+
+/deploy/k8s/base/secret.yaml
+
+/deploy/terraform/terraform.tfvars
+/deploy/terraform/.terraform/
+/deploy/terraform/.terraform.lock.hcl
+/deploy/terraform/terraform.tfstate
+/deploy/terraform/terraform.tfstate.backup

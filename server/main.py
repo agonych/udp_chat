@@ -53,7 +53,10 @@ if __name__ == '__main__':
         command = sys.argv[1] # Get the command from the command line arguments
 
         if command == 'init_db': # Initialize the database
+            print("Initializing database...")
             init_db()
+            print("Database initialized successfully")
+            sys.exit(0)
         elif command == 'test': # Run a specific test
             test_name = sys.argv[2] if len(sys.argv) > 2 else None
             if not test_name: # Check if test name is provided
@@ -68,6 +71,7 @@ if __name__ == '__main__':
                 print(f"Error: Test module {test_name} not found.")
                 sys.exit(1)
         elif command == 'start': # Start the server
+            print("Starting server...")
             ip = sys.argv[2] if len(sys.argv) > 2 else None
             port = int(sys.argv[3]) if len(sys.argv) > 3 else None
             start(ip, port)

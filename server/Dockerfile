@@ -19,6 +19,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
+# Make startup script executable
+RUN chmod +x start.sh
+
 # Create necessary directories
 RUN mkdir -p storage/db storage/keys
 
@@ -30,7 +33,5 @@ USER app
 # Expose ports
 EXPOSE 9999 8000
 
-# Health check removed - server runs in foreground
-
 # Default command
-CMD ["python", "main.py", "start"]
+CMD ["/app/start.sh"]

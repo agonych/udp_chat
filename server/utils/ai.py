@@ -8,8 +8,9 @@ Author: Andrej Kudriavcev
 Last Updated: 15/05/2025
 """
 
-from openai import OpenAI
+from openai import OpenAI, AzureOpenAI
 import ollama
+import os
 
 def build_chat_prompt(messages, user, content):
     """
@@ -67,8 +68,23 @@ def gtp_get_ai_response(messages, user, content, model="gpt-3.5-turbo"):
     """
     prompt = build_chat_prompt(messages, user, content)
     try:
-        client = OpenAI()
-        response = client.chat.completions.create(model=model, messages=prompt)
+        # Prefer Azure OpenAI when endpoint is configured; fallback to OpenAI
+        azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+        azure_deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT")
+        api_key = os.getenv("OPENAI_API_KEY")
+
+        if azure_endpoint and azure_deployment:
+            client = AzureOpenAI(
+                azure_endpoint=azure_endpoint,
+                api_key=api_key,
+                api_version="2024-05-01-preview",
+            )
+            model_name = azure_deployment  # deployment name, not model id
+        else:
+            client = OpenAI(api_key=api_key)
+            model_name = model
+
+        response = client.chat.completions.create(model=model_name, messages=prompt)
         return response.choices[0].message.content.strip().strip("\"'").strip()
     except Exception as e:
         print("AI generation failed:", e)

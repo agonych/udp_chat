@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # PostgreSQL Database (same as production)
+  # PostgreSQL Database
   postgresql:
     image: postgres:15-alpine
     container_name: udpchat_postgresql_dev
@@ -11,7 +11,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-udpchat_password}
     volumes:
       - postgres_data_dev:/var/lib/postgresql/data
-      - ./server/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ../../server/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
     ports:
       - "${DB_PORT:-5432}:5432"
     restart: unless-stopped
@@ -26,7 +26,7 @@ services:
   # Python UDP Server (development with volume mounting)
   server:
     build:
-      context: ../server
+      context: ../../server
       dockerfile: Dockerfile
     container_name: udpchat_server_dev
     environment:
@@ -41,22 +41,27 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - AI_MODE=${AI_MODE:-ollama}
     ports:
-      - "${SERVER_PORT:-9999}:9999"
+      - "${SERVER_PORT:-9999}:9999/udp"
     depends_on:
       postgresql:
         condition: service_healthy
     restart: unless-stopped
     volumes:
-      - ./server:/app
+      - ../../server:/app
       - server_storage_dev:/app/storage
     networks:
       - udpchat_dev_network
     command: ["python", "main.py", "start"]
+    healthcheck:
+      test: [ "CMD-SHELL", "python - <<'PY'\nimport socket,sys\ns=socket.socket(socket.AF_INET,socket.SOCK_DGRAM)\ns.settimeout(1)\ns.sendto(b'{}',( '127.0.0.1', 9999))\nprint('ok')\nPY" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # Node.js WebSocket Connector (development with volume mounting)
   connector:
     build:
-      context: ../connector
+      context: ../../connector
       dockerfile: Dockerfile
     container_name: udpchat_connector_dev
     environment:
@@ -71,16 +76,21 @@ services:
         condition: service_healthy
     restart: unless-stopped
     volumes:
-      - ./connector:/app
+      - ../../connector:/app
       - /app/node_modules
     networks:
       - udpchat_dev_network
     command: ["npm", "run", "dev"]
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -q -O- http://localhost:8000/ >/dev/null 2>&1 || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # React Client (development with volume mounting)
   client:
     build:
-      context: ../client
+      context: ../../client
       dockerfile: Dockerfile.dev
     container_name: udpchat_client_dev
     ports:
@@ -90,11 +100,16 @@ services:
         condition: service_healthy
     restart: unless-stopped
     volumes:
-      - ./client:/app
+      - ../../client:/app
       - /app/node_modules
     networks:
       - udpchat_dev_network
     command: ["npm", "run", "dev"]
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -q -O- http://localhost:3000/ >/dev/null 2>&1 || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data_dev:

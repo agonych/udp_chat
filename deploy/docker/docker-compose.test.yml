@@ -17,7 +17,7 @@ services:
 
   server-test:
     build:
-      context: ../server
+      context: ../../server
       dockerfile: Dockerfile
     environment:
       DATABASE_URL: postgresql://udpchat_user:udpchat_password@postgresql-test:5432/udpchat_test
@@ -26,27 +26,25 @@ services:
         condition: service_healthy
     command: python -m pytest tests/ -v --tb=short
     volumes:
-      - ./server:/app
+      - ../../server:/app
     working_dir: /app
 
   # Optional: Test the connector
   connector-test:
     build:
-      context: ../connector
+      context: ../../connector
       dockerfile: Dockerfile
     command: node -e "console.log('Connector test passed')"
     volumes:
-      - ./connector:/app
+      - ../../connector:/app
     working_dir: /app
 
   # Optional: Test the client build
   client-test:
     build:
-      context: ../client
+      context: ../../client
       dockerfile: Dockerfile
     command: echo "Client build test passed"
     volumes:
-      - ./client:/app
+      - ../../client:/app
     working_dir: /app
-
-

@@ -25,9 +25,3 @@ scrape_configs:
       - targets: ['connector:3000']
     scrape_interval: 5s
     metrics_path: '/metrics'
-
-  # Node Exporter (system metrics)
-  - job_name: 'node-exporter'
-    static_configs:
-      - targets: ['node-exporter:9100']
-
