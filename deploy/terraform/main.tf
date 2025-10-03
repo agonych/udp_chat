@@ -68,24 +68,6 @@ resource "azurerm_role_assignment" "acr_pull" {
   ]
 }
 
-# Key Vault for secrets
-resource "azurerm_key_vault" "kv" {
-  name                       = "${var.prefix}kv"
-  resource_group_name        = data.azurerm_resource_group.rg.name
-  location                   = data.azurerm_resource_group.rg.location
-  tenant_id                  = data.azurerm_client_config.current.tenant_id
-  sku_name                   = "standard"
-  soft_delete_retention_days = 7
-  purge_protection_enabled   = false
-  rbac_authorization_enabled = true
-}
-
-# Allow the current principal to manage secrets in this vault
-resource "azurerm_role_assignment" "kv_secrets_officer" {
-  scope                = azurerm_key_vault.kv.id
-  role_definition_name = "Key Vault Secrets Officer"
-  principal_id         = data.azurerm_client_config.current.object_id
-}
 
 # Postgres server
 resource "azurerm_postgresql_flexible_server" "pg" {
