@@ -38,6 +38,7 @@ def create_database():
     Creates the database if it doesn't exist.
     :return: None
     """
+    conn = None
     try:
         # Connect to PostgreSQL server (not to specific database)
         conn = psycopg2.connect(

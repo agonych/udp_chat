@@ -7,6 +7,6 @@ echo "Starting UDP Chat Server..."
 echo "Initializing database..."
 python main.py init_db
 
-# Start the server
+# Start the server with default configuration
 echo "Starting UDP server..."
 exec python main.py start

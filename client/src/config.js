@@ -1,48 +1,45 @@
 /**
  * App Configuration
  *
- * Provides runtime configuration values for the frontend.
- * This includes settings like WebSocket server URL, which
- * can be overridden using environment variables.
+ * Provides build-time configuration values for the frontend.
+ * This includes settings like WebSocket server URL.
  *
- * WebSocket URL:
- * - VITE_WS_URL must be defined in a .env file (Vite standard)
- * - Falls back to ws://127.0.0.1/ws by default (through nginx proxy)
+ * Configuration Priority:
+ * 1. Build-time environment variable VITE_WS_URL (base; '/ws' appended automatically)
+ * 2. Default to same-origin '/ws'
  *
  * Author: Andrej Kudriavcev
  * Last Updated: 15/05/2025
  */
 
-// Dynamic WebSocket URL based on environment variables
-export const getWebSocketURL = () => {
-  // Check for explicit WebSocket URL first
-  if (import.meta.env.VITE_WS_URL) {
-    console.log("[CONFIG] Using environment WebSocket URL:", import.meta.env.VITE_WS_URL);
-    return import.meta.env.VITE_WS_URL;
+// No runtime configuration is used anymore
+
+/**
+ * Dynamic WebSocket URL based on runtime and environment variables
+ */
+export const getWebSocketURL = async () => getWebSocketURLSync();
+
+// Synchronous version for backward compatibility (uses build-time config)
+export const getWebSocketURLSync = () => {
+  const base = (import.meta.env.VITE_WS_URL || '').trim();
+  const wsPath = '/ws';
+
+  if (base) {
+    // Ensure trailing '/ws' is present exactly once
+    const noSlash = base.endsWith('/') ? base.slice(0, -1) : base;
+    const url = `${noSlash}${wsPath}`;
+    console.log("[CONFIG] Using VITE_WS_URL base with '/ws':", url);
+    return url;
   }
-  
-  // Use connector service details from environment variables
-  const wsHost = import.meta.env.VITE_WS_HOST || window.location.hostname;
-  const wsPort = import.meta.env.VITE_WS_PORT;
-  const wsPath = import.meta.env.VITE_WS_PATH || '/ws';
-  
+
+  // Default to same-origin '/ws'
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  
-  // Build WebSocket URL
-  let wsUrl;
-  if (wsPort) {
-    // Use explicit host:port configuration (for direct connector access)
-    wsUrl = `${protocol}//${wsHost}:${wsPort}${wsPath}`;
-  } else {
-    // Fallback to same host with path (for nginx proxy setups)
-    // For nginx proxy, use the same host and port as the current page
-    const currentPort = window.location.port ? `:${window.location.port}` : '';
-    wsUrl = `${protocol}//${wsHost}${currentPort}${wsPath}`;
-  }
-  
-  console.log("[CONFIG] Generated WebSocket URL:", wsUrl);
-  return wsUrl;
+  const host = window.location.hostname;
+  const port = window.location.port ? `:${window.location.port}` : '';
+  const url = `${protocol}//${host}${port}${wsPath}`;
+  console.log("[CONFIG] Using same-origin WS URL:", url);
+  return url;
 };
 
 // Keep backward compatibility
-export const WS_URL = getWebSocketURL();
+export const WS_URL = getWebSocketURLSync();

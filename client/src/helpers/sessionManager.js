@@ -42,7 +42,7 @@ export async function initSession({ setSocket, setLoading, keypairRef }) {
             workerScript: workerUrl
         };
 
-        forge.pki.rsa.generateKeyPair(options, (err, keypair) => {
+        forge.pki.rsa.generateKeyPair(options, async (err, keypair) => {
             // Check for errors during key generation
             if (err) {
                 console.error("❌ RSA key generation failed:", err);
@@ -60,7 +60,7 @@ export async function initSession({ setSocket, setLoading, keypairRef }) {
             const pubBase64 = btoa(pubDer);
             console.log("[WS] Public key (Base64):", pubBase64);
             // Create a new WebSocket connection to the server
-            const wsUrl = getWebSocketURL();
+            const wsUrl = await getWebSocketURL();
             console.log("[WS] Attempting to connect to:", wsUrl);
             const ws = new WebSocket(wsUrl);
             // Set the WebSocket connection to the state

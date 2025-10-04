@@ -41,7 +41,7 @@ PRIVATE_KEY_PATH = os.path.join(KEY_DIR, 'server_private_key.pem')
 PUBLIC_KEY_PATH = os.path.join(KEY_DIR, 'server_public_key.pem')
 
 # Define server configuration
-SERVER_IP = os.getenv('SERVER_IP', '127.0.0.1')
+SERVER_IP = os.getenv('SERVER_IP', '0.0.0.0')
 SERVER_PORT = int(os.getenv('SERVER_PORT', 9999))
 BUFFER_SIZE = int(os.getenv('BUFFER_SIZE', 8192))
 DEBUG = os.getenv('DEBUG', 'False').lower() in ('true', '1', 't', 'yes', 'y')
