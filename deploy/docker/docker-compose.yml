@@ -90,10 +90,11 @@ services:
       context: ../../client
       dockerfile: Dockerfile
       args:
-        VITE_WS_HOST: localhost
-        VITE_WS_PORT: ${CONNECTOR_PORT:-8001}
-        VITE_WS_PATH: /ws
+        VITE_WS_URL: ws://localhost:${CONNECTOR_PORT:-8001}
     container_name: udpchat_client
+    environment:
+      - APP_VERSION=${APP_VERSION:-1.0.0}
+      - NODE_ENV=${NODE_ENV:-production}
     ports:
       - "${CLIENT_PORT:-3000}:80"
     depends_on:
@@ -115,7 +116,7 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      - ../monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -146,8 +147,8 @@ services:
       - GF_DATABASE_SSL_MODE=disable
     volumes:
       - grafana_data:/var/lib/grafana
-      - ../monitoring/grafana/provisioning:/etc/grafana/provisioning
-      - ../monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
     restart: unless-stopped
     networks:
       - udpchat_network

@@ -1,0 +1,39 @@
+{{- if and (include "udpchat.isTesting" . | ne "true") (eq (default "" .Values.deployTarget | lower) "www") }}
+{{- $active := include "udpchat.activeColour" . -}}
+{{- $nginx := printf "nginx-%s" $active -}}
+{{- $conn  := printf "connector-%s" $active -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "udpchat.fullname" . }}-www
+  labels:
+    {{- include "udpchat.labels" . | nindent 4 }}
+    app.kubernetes.io/color: {{ $active | quote }}
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts: [ {{ include "udpchat.host.www" . | quote }} ]
+      secretName: {{ include "udpchat.tlsSecretName" . }}
+  rules:
+    - host: {{ include "udpchat.host.www" . }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $nginx }}
+                port: { number: 80 }
+          - path: /ws
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $conn }}
+                port: { number: {{ default 8001 .Values.connector.port }} }
+{{- end }}

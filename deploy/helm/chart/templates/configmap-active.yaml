@@ -1,0 +1,17 @@
+{{- if and (include "udpchat.isTesting" . | ne "true") (eq (default "" .Values.deployTarget | lower) "www") }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "udpchat.fullname" . }}-active
+  labels:
+    {{- include "udpchat.labels" . | nindent 4 }}
+data:
+  # The active deployment colour for www.<domain>
+  # Allowed values: "green" or "blue"
+  active: {{ include "udpchat.activeColour" . | quote }}
+
+  # (Optional, for ops/scripts convenience — not referenced by templates)
+  wwwHost: {{ include "udpchat.host.www" . | quote }}
+  blueHost: {{ include "udpchat.host.blue" . | quote }}
+  greenHost: {{ include "udpchat.host.green" . | quote }}
+{{- end }}

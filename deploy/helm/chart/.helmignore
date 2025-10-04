@@ -1,0 +1,4 @@
+secret.yaml
+secret.testing.yaml
+*.env
+.env.*

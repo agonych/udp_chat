@@ -1,0 +1,176 @@
+{{- if .Values.testServer.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-server-config
+  labels:
+    {{- include "udpchat.labels" . | nindent 4 }}
+    app.kubernetes.io/component: test-server
+data:
+  nginx.conf: |
+    events {
+        worker_connections 1024;
+    }
+
+    http {
+        include       /etc/nginx/mime.types;
+        default_type  application/octet-stream;
+        
+        # Logging
+        access_log /var/log/nginx/access.log;
+        error_log /var/log/nginx/error.log;
+        
+        # Basic settings
+        sendfile on;
+        tcp_nopush on;
+        tcp_nodelay on;
+        keepalive_timeout 65;
+        types_hash_max_size 2048;
+        
+        # Gzip compression
+        gzip on;
+        gzip_vary on;
+        gzip_min_length 1024;
+        gzip_types text/plain text/css text/xml text/javascript application/javascript application/xml+rss application/json;
+        
+        server {
+            listen 80;
+            server_name _;
+            root /usr/share/nginx/html;
+            index index.html;
+            
+            # Security headers
+            add_header X-Frame-Options "SAMEORIGIN" always;
+            add_header X-Content-Type-Options "nosniff" always;
+            add_header X-XSS-Protection "1; mode=block" always;
+            add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+            
+            # Main page
+            location / {
+                try_files $uri $uri/ /index.html;
+                add_header Cache-Control "no-cache, no-store, must-revalidate";
+                add_header Pragma "no-cache";
+                add_header Expires "0";
+            }
+            
+            # Health check endpoint
+            location /health {
+                access_log off;
+                return 200 "OK\n";
+                add_header Content-Type text/plain;
+            }
+            
+            # API status endpoint
+            location /api/status {
+                access_log off;
+                return 200 '{"status":"ok","timestamp":"$time_iso8601","server":"test-server","version":"1.0.0"}';
+                add_header Content-Type application/json;
+            }
+            
+            # Favicon
+            location /favicon.ico {
+                access_log off;
+                log_not_found off;
+                return 204;
+            }
+            
+            # Static assets
+            location ~* \.(css|js|png|jpg|jpeg|gif|ico|svg)$ {
+                expires 1y;
+                add_header Cache-Control "public, immutable";
+            }
+        }
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-server-html
+  labels:
+    {{- include "udpchat.labels" . | nindent 4 }}
+    app.kubernetes.io/component: test-server
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>UDP Chat - Test Server</title>
+        <style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                max-width: 800px;
+                margin: 0 auto;
+                padding: 20px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                min-height: 100vh;
+            }
+            .container {
+                background: rgba(255, 255, 255, 0.1);
+                backdrop-filter: blur(10px);
+                border-radius: 20px;
+                padding: 40px;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            }
+            h1 {
+                text-align: center;
+                margin-bottom: 30px;
+                font-size: 2.5em;
+                text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            }
+            .status {
+                background: rgba(76, 175, 80, 0.2);
+                border: 2px solid #4CAF50;
+                border-radius: 10px;
+                padding: 20px;
+                margin: 20px 0;
+                text-align: center;
+            }
+            .info {
+                background: rgba(33, 150, 243, 0.2);
+                border: 2px solid #2196F3;
+                border-radius: 10px;
+                padding: 20px;
+                margin: 20px 0;
+            }
+            .timestamp {
+                font-size: 0.9em;
+                opacity: 0.8;
+                text-align: center;
+                margin-top: 30px;
+            }
+            .links {
+                text-align: center;
+                margin: 30px 0;
+            }
+            .links a {
+                color: #FFD700;
+                text-decoration: none;
+                margin: 0 15px;
+                padding: 10px 20px;
+                background: rgba(255, 215, 0, 0.2);
+                border-radius: 25px;
+                transition: all 0.3s ease;
+            }
+            .links a:hover {
+                background: rgba(255, 215, 0, 0.4);
+                transform: translateY(-2px);
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>UDP Chat Test Server</h1>
+            
+            <div class="status">
+                <h2>✅ Status: Online</h2>
+                <p>Test server is running successfully!</p>
+            </div>
+        </div>
+    </body>
+    </html>
+  health: |
+    OK
+{{- end }}

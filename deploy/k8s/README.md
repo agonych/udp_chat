@@ -22,7 +22,6 @@ This directory contains Kubernetes manifests for deploying the UDP Chat applicat
 ```bash
 # Copy and edit the secret file
 cp secret.yaml.sample secret.yaml
-# Edit secret.yaml with your actual values
 ```
 
 ### 3. Build Docker Images

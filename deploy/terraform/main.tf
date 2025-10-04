@@ -6,6 +6,12 @@ data "azurerm_resource_group" "rg" {
 # Who runs Terraform
 data "azurerm_client_config" "current" {}
 
+# Get the DNS zone (must exist in Azure DNS of the account)
+data "azurerm_dns_zone" "chat" {
+  name                = var.project_dns_zone
+  resource_group_name = data.azurerm_resource_group.rg.name
+}
+
 # Create new ACR
 resource "azurerm_container_registry" "acr" {
   name                = "${var.prefix}acr"
@@ -34,6 +40,18 @@ resource "azurerm_kubernetes_cluster" "aks" {
   }
 }
 
+# Allow AKS to pull images from ACR (AcrPull)
+resource "azurerm_role_assignment" "acr_pull" {
+  principal_id                     = azurerm_kubernetes_cluster.aks.kubelet_identity[0].object_id
+  role_definition_name             = "AcrPull"
+  scope                            = azurerm_container_registry.acr.id
+  skip_service_principal_aad_check = true
+
+  depends_on = [
+    azurerm_kubernetes_cluster.aks
+  ]
+}
+
 # Reserve static public IP for wildcard ingress controller
 resource "azurerm_public_ip" "ingress" {
   name                = "${var.prefix}-ingress-ip"
@@ -47,27 +65,23 @@ resource "azurerm_public_ip" "ingress" {
   }
 }
 
+# Create DNS A main record
+resource "azurerm_dns_a_record" "main" {
+  name                = "@"
+  zone_name           = data.azurerm_dns_zone.chat.name
+  resource_group_name = data.azurerm_resource_group.rg.name
+  ttl                 = 15
+  records             = [azurerm_public_ip.ingress.ip_address]
+}
+
 # Create wildcard DNS record
 resource "azurerm_dns_a_record" "wildcard" {
   name                = "*"
   zone_name           = data.azurerm_dns_zone.chat.name
   resource_group_name = data.azurerm_resource_group.rg.name
-  ttl                 = 60
+  ttl                 = 15
   records             = [azurerm_public_ip.ingress.ip_address]
 }
-
-# Allow AKS to pull images from ACR (AcrPull)
-resource "azurerm_role_assignment" "acr_pull" {
-  principal_id                     = azurerm_kubernetes_cluster.aks.kubelet_identity[0].object_id
-  role_definition_name             = "AcrPull"
-  scope                            = azurerm_container_registry.acr.id
-  skip_service_principal_aad_check = true
-
-  depends_on = [
-    azurerm_kubernetes_cluster.aks
-  ]
-}
-
 
 # Postgres server
 resource "azurerm_postgresql_flexible_server" "pg" {
@@ -105,11 +119,6 @@ resource "azurerm_postgresql_flexible_server_firewall_rule" "allow_all" {
   end_ip_address   = "255.255.255.255"
 }
 
-# Get the DNS zone (must exist in Azure DNS of the account)
-data "azurerm_dns_zone" "chat" {
-  name                = var.project_dns_zone
-  resource_group_name = data.azurerm_resource_group.rg.name
-}
 
 # Allow AKS managed identity to manage DNS records (for external-dns)
 resource "azurerm_role_assignment" "aks_dns_contributor" {
@@ -119,3 +128,4 @@ resource "azurerm_role_assignment" "aks_dns_contributor" {
   
   depends_on = [azurerm_kubernetes_cluster.aks]
 }
+

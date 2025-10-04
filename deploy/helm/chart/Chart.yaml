@@ -1,0 +1,35 @@
+apiVersion: v2
+name: udpchat
+description: Secure UDP chat — frontend (nginx), connector (WSS), optional UDP relay, with blue/green & testing deployments.
+type: application
+
+# Bump this when change chart templates/values
+version: 0.1.0
+
+# The version of app images. Purely informational for Helm; does not pin container tags.
+appVersion: "0.1.0"
+
+# Kubernetes version compatibility.
+kubeVersion: ">=1.25.0-0"
+
+keywords:
+  - udpchat
+  - blue-green
+  - websocket
+  - ingress
+  - cert-manager
+
+home: https://chat.kudriavcev.com
+sources:
+  - https://github.com/agonych/udp_chat
+
+maintainers:
+  - name: Andrej Kudriavcev
+    email: andrej@kudriavcev.info
+
+# No dependencies for now.
+# dependencies:
+#   - name: kube-prometheus-stack
+#     version: "~58.0"
+#     repository: "https://prometheus-community.github.io/helm-charts"
+#     condition: monitoring.enabled

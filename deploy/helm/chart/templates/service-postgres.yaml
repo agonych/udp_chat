@@ -1,0 +1,19 @@
+{{- if and (.Values.testing.enableDb) (include "udpchat.isTesting" . | eq "true") }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  labels:
+    {{- include "udpchat.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "udpchat.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres
+  ports:
+    - name: pg
+      port: 5432
+      targetPort: 5432
+      protocol: TCP
+{{- end }}

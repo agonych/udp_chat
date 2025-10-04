@@ -1,0 +1,53 @@
+# Testing env overrides
+deployTarget: "testing"
+
+# Enable test-server in testing environment
+testServer:
+  enabled: true
+  replicas: 1
+  image:
+    repository: udpchatacr.azurecr.io/test-server
+    tag: latest
+    pullPolicy: IfNotPresent
+  resources: {}
+
+testing:
+  enableDb: true
+
+# Use fewer replicas by default in testing
+nginx:
+  replicas: 1
+  env:
+    WS_URL: "ws://connector:8001/ws"  # WebSocket URL for testing
+    APP_VERSION: "testing"
+    NODE_ENV: "testing"
+
+connector:
+  replicas: 1
+  env:
+    UDP_SERVER_HOST: "udp-server"
+    UDP_SERVER_PORT: "9999"
+
+udp:
+  replicas: 1
+  port: 9999
+  env:
+    DB_HOST: "postgres"
+    DB_PORT: "5432"
+    DB_NAME: "udpchat"
+    DB_USER: "udpchat"
+    AI_MODE: "gpt"
+
+# For testing, let Helm create the app secret so deploys are repeatable
+existingAppSecret:
+  enabled: false
+
+appSecret:
+  enabled: true
+  name: "udpchat-app"
+  data:
+    # Minimum required by Postgres and app
+    POSTGRES_PASSWORD: "change-me-testing"
+    DB_PASSWORD: "change-me-testing"
+    # OpenAI API key for GPT mode
+    OPENAI_API_KEY: "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"

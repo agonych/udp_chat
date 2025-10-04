@@ -1,0 +1,26 @@
+{{- if or (include "udpchat.isTesting" . | eq "true") (ne (include "udpchat.currentColour" .) "") }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "udpchat.name.connector" . }}
+  labels:
+    {{- include "udpchat.labels" . | nindent 4 }}
+    app.kubernetes.io/component: connector
+    {{- $col := include "udpchat.currentColour" . }}
+    {{- if $col }}
+    app.kubernetes.io/color: {{ $col }}
+    {{- end }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "udpchat.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: connector
+    {{- if $col }}
+    app.kubernetes.io/color: {{ $col }}
+    {{- end }}
+  ports:
+    - name: ws
+      port: {{ default 8001 .Values.connector.port }}
+      targetPort: {{ default 8001 .Values.connector.port }}
+      protocol: TCP
+{{- end }}

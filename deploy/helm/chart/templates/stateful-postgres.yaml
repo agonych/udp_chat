@@ -1,0 +1,100 @@
+{{- if and (.Values.testing.enableDb) (include "udpchat.isTesting" . | eq "true") }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  labels:
+    {{- include "udpchat.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "udpchat.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: postgres
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        {{- include "udpchat.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: postgres
+      {{- with .Values.testing.db.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml (default dict .Values.podSecurityContext) | nindent 8 }}
+      containers:
+        - name: postgres
+          image: {{ default "postgres:16-alpine" .Values.testing.db.image }}
+          imagePullPolicy: {{ default "IfNotPresent" .Values.testing.db.imagePullPolicy }}
+          ports:
+            - name: pg
+              containerPort: 5432
+              protocol: TCP
+          env:
+            - name: POSTGRES_DB
+              value: {{ default "udpchat" .Values.testing.db.name | quote }}
+            - name: POSTGRES_USER
+              value: {{ default "udpchat" .Values.testing.db.user | quote }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  # Resolve secret name in this order:
+                  # 1) existingAppSecret.name if enabled
+                  # 2) appSecret.name if enabled
+                  # 3) fallback to "postgres-testing"
+                  name: {{ if .Values.existingAppSecret.enabled }}{{ .Values.existingAppSecret.name | quote }}{{ else if .Values.appSecret.enabled }}{{ default "udpchat-app" .Values.appSecret.name | quote }}{{ else }}"postgres-testing"{{ end }}
+                  key: {{ default "POSTGRES_PASSWORD" .Values.testing.db.passwordKey | quote }}
+          {{- if or .Values.existingAppSecret.enabled .Values.appSecret.enabled }}
+          envFrom:
+            - secretRef:
+                name: {{ if .Values.existingAppSecret.enabled }}{{ .Values.existingAppSecret.name | quote }}{{ else }}{{ default "udpchat-app" .Values.appSecret.name | quote }}{{ end }}
+          {{- end }}
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} -h 127.0.0.1 -p 5432"]
+            initialDelaySeconds: {{ default 5 .Values.testing.db.readiness.initialDelaySeconds }}
+            periodSeconds: {{ default 10 .Values.testing.db.readiness.periodSeconds }}
+            timeoutSeconds: {{ default 3 .Values.testing.db.readiness.timeoutSeconds }}
+            failureThreshold: {{ default 3 .Values.testing.db.readiness.failureThreshold }}
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} -h 127.0.0.1 -p 5432"]
+            initialDelaySeconds: {{ default 20 .Values.testing.db.liveness.initialDelaySeconds }}
+            periodSeconds: {{ default 20 .Values.testing.db.liveness.periodSeconds }}
+            timeoutSeconds: {{ default 3 .Values.testing.db.liveness.timeoutSeconds }}
+            failureThreshold: {{ default 5 .Values.testing.db.liveness.failureThreshold }}
+          resources:
+            {{- toYaml (default dict .Values.testing.db.resources) | nindent 12 }}
+          volumeMounts:
+            - name: pgdata
+              mountPath: /var/lib/postgresql/data
+              subPath: data
+      {{- if not (default false .Values.testing.db.persistence.enabled) }}
+      # Ephemeral by default: emptyDir goes away when the pod is deleted
+      volumes:
+        - name: pgdata
+          emptyDir: {}
+      {{- end }}
+  {{- if (default false .Values.testing.db.persistence.enabled) }}
+  volumeClaimTemplates:
+    - metadata:
+        name: pgdata
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        {{- with .Values.testing.db.persistence.storageClass }}
+        storageClassName: {{ . | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ default "5Gi" .Values.testing.db.persistence.size }}
+  {{- end }}
+{{- end }}

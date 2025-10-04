@@ -1,0 +1,39 @@
+{{- if .Values.nginx.runtimeConfig.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "udpchat.fullname" . }}-nginx-runtime
+  labels:
+    {{- include "udpchat.labels" . | nindent 4 }}
+data:
+  # Nginx default server that adds /api/config as a static JSON file
+  default.conf: |
+    server {
+      listen 80;
+      server_name _;
+
+      # Health for probes
+      location = /healthz { return 200; }
+
+      # Runtime configuration as JSON
+      location = /api/config {
+        default_type application/json;
+        add_header Cache-Control "no-store";
+        try_files /etc/nginx/runtime/config.json =404;
+      }
+
+      # static site
+      location / {
+        root /usr/share/nginx/html;
+        try_files $uri /index.html;
+      }
+    }
+
+  # Template rendered by envsubst at startup into /etc/nginx/runtime/config.json
+  config.json.tmpl: |
+    {
+      "wsUrl": "${WS_URL:-}",
+      "appVersion": "${APP_VERSION:-}",
+      "nodeEnv": "${NODE_ENV:-production}"
+    }
+{{- end }}

@@ -49,49 +49,6 @@ docker-compose down
 - Prometheus: http://localhost:9090
 - Grafana: http://localhost:3001
 
-## Development Environment
-
-**Start with hot reloading:**
-```bash
-docker-compose -f docker-compose.dev.yml up -d
-```
-
-**Check status:**
-```bash
-docker-compose -f docker-compose.dev.yml ps
-```
-
-**View logs:**
-```bash
-docker-compose -f docker-compose.dev.yml logs -f
-```
-
-**Stop and remove:**
-```bash
-docker-compose -f docker-compose.dev.yml down
-```
-
-**Access:**
-- Web Client: http://localhost:3000
-- Server: localhost:9999 (UDP)
-
-## Testing
-
-**Run tests:**
-```bash
-docker-compose -f docker-compose.test.yml up --abort-on-container-exit
-```
-
-**View test results:**
-```bash
-docker-compose -f docker-compose.test.yml logs server-test
-```
-
-**Clean up:**
-```bash
-docker-compose -f docker-compose.test.yml down -v
-```
-
 ## Common Commands
 
 **Rebuild containers:**

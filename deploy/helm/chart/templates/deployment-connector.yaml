@@ -1,0 +1,114 @@
+{{- if or (include "udpchat.isTesting" . | eq "true") (ne (include "udpchat.currentColour" .) "") }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "udpchat.name.connector" . }}
+  labels:
+    {{- include "udpchat.labels" . | nindent 4 }}
+    app.kubernetes.io/component: connector
+    {{- $col := include "udpchat.currentColour" . }}
+    {{- if $col }}
+    app.kubernetes.io/color: {{ $col }}
+    {{- end }}
+spec:
+  replicas: {{ default 2 .Values.connector.replicas }}
+  revisionHistoryLimit: {{ default 3 .Values.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "udpchat.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: connector
+      {{- if $col }}
+      app.kubernetes.io/color: {{ $col }}
+      {{- end }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: {{ default "25%" .Values.connector.updateStrategy.maxUnavailable | quote }}
+      maxSurge: {{ default "25%" .Values.connector.updateStrategy.maxSurge | quote }}
+  template:
+    metadata:
+      labels:
+        {{- include "udpchat.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: connector
+        {{- if $col }}
+        app.kubernetes.io/color: {{ $col }}
+        {{- end }}
+      {{- with .Values.connector.podLabels }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.connector.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ default "default" .Values.serviceAccountName | quote }}
+      securityContext:
+        {{- toYaml (default dict .Values.podSecurityContext) | nindent 8 }}
+      containers:
+        - name: connector
+          image: {{ include "udpchat.image.connector" . }}
+          imagePullPolicy: {{ default "IfNotPresent" .Values.connector.imagePullPolicy }}
+          ports:
+            - name: ws
+              containerPort: {{ default 8001 .Values.connector.port }}
+              protocol: TCP
+          env:
+            # Common, safe defaults
+            - name: NODE_ENV
+              value: {{ default "production" .Values.connector.nodeEnv | quote }}
+            - name: WS_PORT
+              value: {{ default 8001 .Values.connector.port | quote }}
+            - name: UDP_SERVER_HOST
+              value: {{ include "udpchat.name.udp" . | quote }}
+            - name: UDP_SERVER_PORT
+              value: {{ default 9999 .Values.udp.port | quote }}
+            {{- range $k, $v := (default dict .Values.connector.env) }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+          {{- if .Values.existingAppSecret.enabled }}
+          envFrom:
+            - secretRef:
+                name: {{ .Values.existingAppSecret.name | quote }}
+          {{- end }}
+          args:
+          {{- range $a := (default list .Values.connector.args) }}
+            - {{ $a | quote }}
+          {{- end }}
+          readinessProbe:
+            tcpSocket:
+              port: {{ default 8001 .Values.connector.port }}
+            initialDelaySeconds: {{ default 5 .Values.connector.readiness.initialDelaySeconds }}
+            periodSeconds: {{ default 10 .Values.connector.readiness.periodSeconds }}
+            timeoutSeconds: {{ default 2 .Values.connector.readiness.timeoutSeconds }}
+            failureThreshold: {{ default 3 .Values.connector.readiness.failureThreshold }}
+          livenessProbe:
+            tcpSocket:
+              port: {{ default 8001 .Values.connector.port }}
+            initialDelaySeconds: {{ default 15 .Values.connector.liveness.initialDelaySeconds }}
+            periodSeconds: {{ default 20 .Values.connector.liveness.periodSeconds }}
+            timeoutSeconds: {{ default 2 .Values.connector.liveness.timeoutSeconds }}
+            failureThreshold: {{ default 3 .Values.connector.liveness.failureThreshold }}
+          resources:
+            {{- toYaml (default dict .Values.connector.resources) | nindent 12 }}
+          securityContext:
+            {{- toYaml (default dict .Values.containerSecurityContext) | nindent 12 }}
+          volumeMounts:
+            {{- with .Values.connector.volumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+      volumes:
+        {{- with .Values.connector.volumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      nodeSelector:
+        {{- toYaml (default dict .Values.nodeSelector) | nindent 8 }}
+      tolerations:
+        {{- toYaml (default list .Values.tolerations) | nindent 8 }}
+      affinity:
+        {{- toYaml (default dict .Values.affinity) | nindent 8 }}
+{{- end }}

@@ -1,0 +1,138 @@
+{{- if or (include "udpchat.isTesting" . | eq "true") (ne (include "udpchat.currentColour" .) "") }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "udpchat.name.nginx" . }}
+  labels:
+    {{- include "udpchat.labels" . | nindent 4 }}
+    app.kubernetes.io/component: nginx
+    {{- $col := include "udpchat.currentColour" . }}
+    {{- if $col }}
+    app.kubernetes.io/color: {{ $col }}
+    {{- end }}
+spec:
+  replicas: {{ default 2 .Values.nginx.replicas }}
+  revisionHistoryLimit: {{ default 3 .Values.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "udpchat.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: nginx
+      {{- if $col }}
+      app.kubernetes.io/color: {{ $col }}
+      {{- end }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: {{ default "25%" .Values.nginx.updateStrategy.maxUnavailable | quote }}
+      maxSurge: {{ default "25%" .Values.nginx.updateStrategy.maxSurge | quote }}
+  template:
+    metadata:
+      labels:
+        {{- include "udpchat.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: nginx
+        {{- if $col }}
+        app.kubernetes.io/color: {{ $col }}
+        {{- end }}
+        {{- with .Values.nginx.podLabels }}{{- toYaml . | nindent 8 }}{{- end }}
+      {{- with .Values.nginx.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ default "default" .Values.serviceAccountName | quote }}
+      securityContext:
+        {{- toYaml (default dict .Values.podSecurityContext) | nindent 8 }}
+
+      {{- if .Values.nginx.runtimeConfig.enabled }}
+      # --- Renders /etc/nginx/runtime/config.json from env at startup
+      initContainers:
+        - name: render-config
+          image: alpine:3.19
+          command: ["/bin/sh","-c"]
+          args:
+            - >-
+              set -e;
+              apk add --no-cache gettext >/dev/null;
+              envsubst < /tmpl/config.json.tmpl > /work/config.json;
+          env:
+            - name: WS_URL
+              value: {{ default "" (get (default dict .Values.nginx.env) "WS_URL") | quote }}
+            - name: APP_VERSION
+              value: {{ default "" (get (default dict .Values.nginx.env) "APP_VERSION") | quote }}
+            - name: NODE_ENV
+              value: {{ default "production" (get (default dict .Values.nginx.env) "NODE_ENV") | quote }}
+          volumeMounts:
+            - name: runtime-out
+              mountPath: /work
+            - name: runtime-tmpl
+              mountPath: /tmpl
+      {{- end }}
+
+      containers:
+        - name: nginx
+          image: {{ include "udpchat.image.nginx" . }}
+          imagePullPolicy: {{ default "IfNotPresent" .Values.nginx.imagePullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ default 80 .Values.nginx.port }}
+              protocol: TCP
+          {{- if .Values.nginx.env }}
+          env:
+            {{- range $k, $v := .Values.nginx.env }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+          {{- end }}
+          {{- if .Values.existingAppSecret.enabled }}
+          envFrom:
+            - secretRef: { name: {{ .Values.existingAppSecret.name | quote }} }
+          {{- end }}
+          readinessProbe:
+            httpGet: { path: {{ default "/healthz" .Values.nginx.readiness.path | quote }}, port: {{ default 80 .Values.nginx.port }} }
+            initialDelaySeconds: {{ default 5 .Values.nginx.readiness.initialDelaySeconds }}
+            periodSeconds: {{ default 10 .Values.nginx.readiness.periodSeconds }}
+            timeoutSeconds: {{ default 2 .Values.nginx.readiness.timeoutSeconds }}
+            failureThreshold: {{ default 3 .Values.nginx.readiness.failureThreshold }}
+          livenessProbe:
+            httpGet: { path: {{ default "/healthz" .Values.nginx.liveness.path | quote }}, port: {{ default 80 .Values.nginx.port }} }
+            initialDelaySeconds: {{ default 15 .Values.nginx.liveness.initialDelaySeconds }}
+            periodSeconds: {{ default 20 .Values.nginx.liveness.periodSeconds }}
+            timeoutSeconds: {{ default 2 .Values.nginx.liveness.timeoutSeconds }}
+            failureThreshold: {{ default 3 .Values.nginx.liveness.failureThreshold }}
+          resources:
+            {{- toYaml (default dict .Values.nginx.resources) | nindent 12 }}
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
+          volumeMounts:
+            {{- with .Values.nginx.volumeMounts }}{{- toYaml . | nindent 12 }}{{- end }}
+            {{- if .Values.nginx.runtimeConfig.enabled }}
+            - name: runtime-out
+              mountPath: /etc/nginx/runtime                       # contains config.json
+            - name: runtime-conf
+              mountPath: /etc/nginx/conf.d/default.conf           # nginx server definition
+              subPath: default.conf
+            {{- end }}
+
+      volumes:
+        {{- with .Values.nginx.volumes }}{{- toYaml . | nindent 8 }}{{- end }}
+        {{- if .Values.nginx.runtimeConfig.enabled }}
+        - name: runtime-out
+          emptyDir: {}
+        - name: runtime-tmpl
+          configMap:
+            name: {{ include "udpchat.fullname" . }}-nginx-runtime
+            items:
+              - key: config.json.tmpl
+                path: config.json.tmpl
+        - name: runtime-conf
+          configMap:
+            name: {{ include "udpchat.fullname" . }}-nginx-runtime
+            items:
+              - key: default.conf
+                path: default.conf
+        {{- end }}
+{{- end }}

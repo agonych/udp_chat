@@ -1,0 +1,38 @@
+# Production shared overrides (used by blue/green/www releases)
+testServer:
+  enabled: false
+
+nginx:
+  replicas: 2
+  runtimeConfig:
+    enabled: true
+  env:
+    WS_URL: "wss://{{ .Values.ingress.host }}/ws"  # Use HTTPS WebSocket in production
+    APP_VERSION: "{{ .Chart.Version }}"
+    NODE_ENV: "production"
+  resources: {}
+  # Example:
+  # resources:
+  #   requests: { cpu: "100m", memory: "128Mi" }
+  #   limits:   { cpu: "500m", memory: "256Mi" }
+
+connector:
+  replicas: 2
+  resources: {}
+  # Example:
+  # resources:
+  #   requests: { cpu: "200m", memory: "256Mi" }
+  #   limits:   { cpu: "1", memory: "512Mi" }
+
+udp:
+  replicas: 1
+  env:
+    AI_MODE: "gpt"
+    # Override DB settings from secret (external Azure PostgreSQL)
+    DB_HOST: "udpchatpg.postgres.database.azure.com"
+    DB_PORT: "5432"
+    DB_NAME: "udpchat"
+    DB_USER: "pgadmin"
+  resources: {}
+  httpStatus:
+    enabled: false  # flip to true for an HTTP health endpoint in prod

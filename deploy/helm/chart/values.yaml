@@ -1,0 +1,196 @@
+# =========================================================
+# Global / shared defaults
+# =========================================================
+domain: "chat.kudriavcev.com"
+
+# What slice to render (scripts set this per release):
+#   testing | blue | green | both | www
+deployTarget: "testing"
+
+# Where www.<domain> should route (used by configmap-active & www ingress)
+activeColor: "green"
+
+# Use an already-created Secret for app config (preferred)
+existingAppSecret:
+  enabled: true
+  name: "udpchat-app"
+
+# TLS secret used by Ingress (created externally or by a separate cert-manager step)
+certificate:
+  create: false                # app chart will NOT create a Certificate by default
+  name: "wildcard-udpchat"     # optional, only used if create=true
+  secretName: "wildcard-udpchat-tls"
+  issuer:
+    kind: "ClusterIssuer"
+    name: "letsencrypt-prod"
+
+# Image registry pull secrets
+imagePullSecrets: []
+# - name: acr-pull
+
+# Shared SA / security / scheduling defaults
+serviceAccountName: "default"
+podSecurityContext: {}
+# fsGroup: 2000
+containerSecurityContext: {}
+  # runAsNonRoot: true
+  # runAsUser: 1000
+  # allowPrivilegeEscalation: false
+  # capabilities:
+#   drop: ["ALL"]
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+revisionHistoryLimit: 3
+
+# Subdomains per environment
+testing:
+  subdomain: "testing"
+  enableDb: true
+  db:
+    image: "postgres:16-alpine"
+    imagePullPolicy: IfNotPresent
+    name: "udpchat"
+    user: "udpchat"
+    passwordKey: "POSTGRES_PASSWORD"   # key inside the Secret
+    readiness:
+      initialDelaySeconds: 5
+      periodSeconds: 10
+      timeoutSeconds: 3
+      failureThreshold: 3
+    liveness:
+      initialDelaySeconds: 20
+      periodSeconds: 20
+      timeoutSeconds: 3
+      failureThreshold: 5
+    resources: {}
+    persistence:
+      enabled: false        # default: ephemeral emptyDir
+      size: "5Gi"
+      # storageClass: "managed-csi"
+
+prod:
+  subdomains:
+    blue: "blue"
+    green: "green"
+    www: "www"
+
+# =========================================================
+# Images (set connector & udp via deploy script/--set)
+# =========================================================
+images:
+  nginx: "udpchatacr.azurecr.io/client:latest"
+  connector: "udpchatacr.azurecr.io/connector:latest"
+  udp: "udpchatacr.azurecr.io/server:latest"
+
+# =========================================================
+# NGINX (frontend + runtime /api/config)
+# =========================================================
+nginx:
+  replicas: 1
+  port: 80
+  imagePullPolicy: Always
+
+  # Runtime config: render /api/config via envsubst at startup
+  runtimeConfig:
+    enabled: false
+
+  # Environment passed to nginx (also used by the initContainer for envsubst)
+  env:
+    WS_URL: ""              # left empty -> same-origin '/ws'
+    APP_VERSION: "testing"
+    NODE_ENV: "testing"
+
+  resources: {}
+  updateStrategy:
+    maxUnavailable: "25%"
+    maxSurge: "25%"
+
+  readiness:
+    path: "/healthz"
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 2
+    failureThreshold: 3
+  liveness:
+    path: "/healthz"
+    initialDelaySeconds: 15
+    periodSeconds: 20
+    timeoutSeconds: 2
+    failureThreshold: 3
+
+  volumeMounts: []
+  volumes: []
+  podLabels: {}
+  podAnnotations: {}
+
+# =========================================================
+# Connector (WebSocket server)
+# =========================================================
+connector:
+  replicas: 2
+  port: 8001
+  inactivityTimeoutMs: 600000   # 10 minutes
+  nodeEnv: "production"
+  imagePullPolicy: IfNotPresent
+
+  # Any extra non-secret env (K: V)
+  env: {}
+  # args: ["--flag", "value"]
+  args: []
+
+  resources: {}
+  updateStrategy:
+    maxUnavailable: "25%"
+    maxSurge: "25%"
+
+  readiness:
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 2
+    failureThreshold: 3
+  liveness:
+    initialDelaySeconds: 15
+    periodSeconds: 20
+    timeoutSeconds: 2
+    failureThreshold: 3
+
+  volumeMounts: []
+  volumes: []
+  podLabels: {}
+  podAnnotations: {}
+
+# =========================================================
+# UDP relay/server (internal)
+# =========================================================
+udp:
+  replicas: 1
+  port: 9999
+  bindHost: "0.0.0.0"
+  imagePullPolicy: IfNotPresent
+
+  # Non-secret toggles
+  env:
+    DB_HOST: "postgres"
+    DB_PORT: "5432"
+    DB_NAME: "udpchat"
+    DB_USER: "udpchat"
+  args: []
+
+  resources: {}
+  updateStrategy:
+    maxUnavailable: "25%"
+    maxSurge: "25%"
+
+  # UDP container also exposes an HTTP health endpoint
+  httpStatus:
+    enabled: false
+    port: 8080
+    path: "/healthz"
+
+  volumeMounts: []
+  volumes: []
+  podLabels: {}
+  podAnnotations: {}

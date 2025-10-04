@@ -1,0 +1,16 @@
+controller:
+  service:
+    loadBalancerIP:
+    annotations:
+      service.beta.kubernetes.io/azure-pip-name: udpchat-ingress-ip
+      service.beta.kubernetes.io/azure-load-balancer-resource-group: MC_udpchat_udpchataks_australiasoutheast
+      # Keep the LB health check stable across restarts
+      service.beta.kubernetes.io/azure-load-balancer-health-probe-protocol: Tcp
+      service.beta.kubernetes.io/azure-load-balancer-health-probe-port: "443"
+  # Ensure the class name is present/consistent
+  ingressClassResource:
+    name: nginx
+    enabled: true
+  ingressClass: nginx
+
+
