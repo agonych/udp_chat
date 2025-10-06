@@ -22,6 +22,18 @@ if (-not $acrLoginServer) {
 Write-Host "==> Building and pushing images to $acrLoginServer"
 Write-Host "Tag: $Tag"
 
+# Verify Docker CLI and daemon availability early
+if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
+    Write-Error "Docker CLI not found. Please install Docker Desktop and ensure 'docker' is on PATH."
+    exit 1
+}
+try {
+    docker version | Out-Null
+} catch {
+    Write-Error "Docker daemon not reachable. Start Docker Desktop and retry. Details: $($_.Exception.Message)"
+    exit 1
+}
+
 # Login to ACR
 Write-Host "==> Logging into ACR"
 az acr login --name $acrLoginServer.Split('.')[0]

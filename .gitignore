@@ -19,8 +19,3 @@ server/storage/*
 /deploy/helm/.env
 /deploy/helm/chart/secret.yaml
 /deploy/helm/chart/secret.testing.yaml
-
-/deploy/tls/.env
-/deploy/tls/20-clusterissuer-letsencrypt-prod.yaml
-/deploy/tls/30-certificate-prod.yaml
-/deploy/tls/30-certificate-testing.yaml

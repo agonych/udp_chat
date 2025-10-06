@@ -1,4 +1,26 @@
-{{- if .Values.certificate.create }}
+{{/*
+  In testing we cannot use HTTP-01 for wildcard SANs. Issue a single-host
+  certificate for testing.<domain> when testing.tlsEnabled is true.
+  In prod, fall back to the original wildcard certificate when
+  .Values.certificate.create is true (use DNS-01 if desired).
+*/}}
+{{- if (include "udpchat.isTesting" . | eq "true") -}}
+  {{- if .Values.testing.tlsEnabled }}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ default "udpchat-testing" .Values.certificate.name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  secretName: {{ include "udpchat.tlsSecretName" . }}
+  issuerRef:
+    name: {{ required "certificate.issuer.name is required" .Values.certificate.issuer.name }}
+    kind: {{ default "ClusterIssuer" .Values.certificate.issuer.kind }}
+  dnsNames:
+    - {{ include "udpchat.host.testing" . | quote }}
+  {{- end }}
+{{- else -}}
+  {{- if .Values.certificate.create }}
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
@@ -12,4 +34,5 @@ spec:
   dnsNames:
     - {{ printf "*.%s" .Values.domain | quote }}
     - {{ .Values.domain | quote }}
+  {{- end }}
 {{- end }}

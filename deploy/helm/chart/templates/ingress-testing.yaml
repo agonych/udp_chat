@@ -13,6 +13,7 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
 spec:
   ingressClassName: nginx
+  {{- if .Values.testing.tlsEnabled }}
   tls:
     - hosts: 
         - {{ include "udpchat.host.testing" . | quote }}
@@ -21,6 +22,7 @@ spec:
         - {{ include "udpchat.host.green" . | quote }}
         - {{ include "udpchat.host.www" . | quote }}
       secretName: {{ include "udpchat.tlsSecretName" . }}
+  {{- end }}
   rules:
     - host: {{ include "udpchat.host.testing" . }}
       http:

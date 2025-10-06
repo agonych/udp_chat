@@ -1,115 +1,56 @@
 #!/bin/bash
 
-# Build and Push Docker Images Script for Linux
-# Usage: ./build-and-push.sh [-h]
-
 set -e
 
-# Default values
-HELP=false
-TAG="latest"
+# Optional: pass tag as first argument, otherwise use TAG env or default to latest
+TAG="${1:-${TAG:-latest}}"
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-CYAN='\033[0;36m'
-NC='\033[0m' # No Color
-
-# Function to show help
-show_help() {
-    echo "Build and Push Docker Images Script"
-    echo ""
-    echo "Usage:"
-    echo "  ./build-and-push.sh [-h]"
-    echo ""
-    echo "Options:"
-    echo "  -h, --help          Show this help message"
-    echo ""
-    echo "This script builds and pushes all Docker images to Azure Container Registry."
-    echo "Images built:"
-    echo "  - server (UDP chat server)"
-    echo "  - connector (WebSocket connector)"
-    echo "  - client (Frontend application)"
-    exit 0
-}
-
-# Parse command line arguments
-while [[ $# -gt 0 ]]; do
-    case $1 in
-        -h|--help)
-            HELP=true
-            shift
-            ;;
-        *)
-            echo "Unknown option $1"
-            show_help
-            ;;
-    esac
-done
-
-if [[ "$HELP" == true ]]; then
-    show_help
-fi
-
-# Get script directory and repo root
+# Paths
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+TF_DIR="$REPO_ROOT/deploy/terraform"
 
-# ACR configuration
-ACR_NAME="udpchatacr"
-ACR_LOGIN_SERVER="${ACR_NAME}.azurecr.io"
+# Fetch ACR login server from Terraform outputs
+pushd "$TF_DIR" >/dev/null
+ACR_LOGIN_SERVER=$(terraform output -raw acr_login_server 2>/dev/null || true)
+popd >/dev/null
+if [[ -z "$ACR_LOGIN_SERVER" ]]; then
+  echo "ACR login server not found from Terraform outputs. Run terraform apply first."
+  exit 1
+fi
+ACR_NAME="${ACR_LOGIN_SERVER%%.*}"
 
-echo -e "${CYAN}==> Building and pushing images to $ACR_LOGIN_SERVER${NC}"
+echo "==> Building and pushing images to $ACR_LOGIN_SERVER"
 echo "Tag: $TAG"
 
-# Login to ACR
-echo -e "${CYAN}==> Logging into ACR${NC}"
-if az acr login --name "$ACR_NAME"; then
-    echo -e "${GREEN}Login Succeeded${NC}"
-else
-    echo -e "${RED}Failed to login to ACR${NC}"
-    exit 1
+# Verify Docker CLI and daemon
+if ! command -v docker >/dev/null 2>&1; then
+  echo "Docker CLI not found. Install/start Docker and retry."
+  exit 1
+fi
+if ! docker version >/dev/null 2>&1; then
+  echo "Docker daemon not reachable. Start Docker and retry."
+  exit 1
 fi
 
-# Function to build and push image
-build_and_push() {
-    local component="$1"
-    local dockerfile="$2"
-    local context="$3"
-    
-    echo -e "${CYAN}==> Building $component image${NC}"
-    
-    # Build the image
-    if docker build -t "$ACR_LOGIN_SERVER/$component:$TAG" -f "$dockerfile" "$context"; then
-        echo -e "${GREEN}Successfully built $component image${NC}"
-    else
-        echo -e "${RED}Failed to build $component image${NC}"
-        exit 1
-    fi
-    
-    # Push the image
-    echo -e "${CYAN}==> Pushing $component image${NC}"
-    if docker push "$ACR_LOGIN_SERVER/$component:$TAG"; then
-        echo -e "${GREEN}Successfully pushed $component image${NC}"
-    else
-        echo -e "${RED}Failed to push $component image${NC}"
-        exit 1
-    fi
-}
+# Login to ACR
+echo "==> Logging into ACR"
+az acr login --name "$ACR_NAME"
 
-# Build and push server image
-build_and_push "server" "$REPO_ROOT/server/Dockerfile" "$REPO_ROOT/server"
+# Build and push
+echo "==> Building server"
+docker build -t "$ACR_LOGIN_SERVER/server:$TAG" "$REPO_ROOT/server"
+docker push "$ACR_LOGIN_SERVER/server:$TAG"
 
-# Build and push connector image
-build_and_push "connector" "$REPO_ROOT/connector/Dockerfile" "$REPO_ROOT/connector"
+echo "==> Building connector"
+docker build -t "$ACR_LOGIN_SERVER/connector:$TAG" "$REPO_ROOT/connector"
+docker push "$ACR_LOGIN_SERVER/connector:$TAG"
 
-# Build and push client image
-build_and_push "client" "$REPO_ROOT/client/Dockerfile" "$REPO_ROOT/client"
+echo "==> Building client"
+docker build -t "$ACR_LOGIN_SERVER/client:$TAG" "$REPO_ROOT/client"
+docker push "$ACR_LOGIN_SERVER/client:$TAG"
 
-echo -e "\n${GREEN}==> All images built and pushed successfully!${NC}"
+echo
+echo "==> All images built and pushed successfully!"
 echo "You can now deploy with:"
-echo "  ./deploy.sh -e testing"
-echo "  ./deploy.sh -e blue"
-echo "  ./deploy.sh -e green"
-echo "  ./deploy.sh -e both"
+echo "  ./deploy/scripts/deploy.sh -e testing -w"

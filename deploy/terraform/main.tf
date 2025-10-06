@@ -3,15 +3,6 @@ data "azurerm_resource_group" "rg" {
   name = var.prefix
 }
 
-# Who runs Terraform
-data "azurerm_client_config" "current" {}
-
-# Get the DNS zone (must exist in Azure DNS of the account)
-data "azurerm_dns_zone" "chat" {
-  name                = var.project_dns_zone
-  resource_group_name = data.azurerm_resource_group.rg.name
-}
-
 # Create new ACR
 resource "azurerm_container_registry" "acr" {
   name                = "${var.prefix}acr"
@@ -23,11 +14,13 @@ resource "azurerm_container_registry" "acr" {
 
 # Create new AKS cluster
 resource "azurerm_kubernetes_cluster" "aks" {
-  name                = "${var.prefix}aks"
-  location            = data.azurerm_resource_group.rg.location
-  resource_group_name = data.azurerm_resource_group.rg.name
-  dns_prefix          = var.prefix
-  kubernetes_version  = var.aks_version
+  name                              = "${var.prefix}aks"
+  location                          = data.azurerm_resource_group.rg.location
+  resource_group_name               = data.azurerm_resource_group.rg.name
+  dns_prefix                        = var.prefix
+  kubernetes_version                = var.aks_version
+  local_account_disabled            = false
+  role_based_access_control_enabled = true
 
   default_node_pool {
     name       = "default"
@@ -37,6 +30,13 @@ resource "azurerm_kubernetes_cluster" "aks" {
 
   identity {
     type = "SystemAssigned"
+  }
+
+  lifecycle {
+    ignore_changes = [
+      # Avoid terraform upgrade_settings churn
+      default_node_pool[0].upgrade_settings
+    ]
   }
 }
 
@@ -65,24 +65,6 @@ resource "azurerm_public_ip" "ingress" {
   }
 }
 
-# Create DNS A main record
-resource "azurerm_dns_a_record" "main" {
-  name                = "@"
-  zone_name           = data.azurerm_dns_zone.chat.name
-  resource_group_name = data.azurerm_resource_group.rg.name
-  ttl                 = 15
-  records             = [azurerm_public_ip.ingress.ip_address]
-}
-
-# Create wildcard DNS record
-resource "azurerm_dns_a_record" "wildcard" {
-  name                = "*"
-  zone_name           = data.azurerm_dns_zone.chat.name
-  resource_group_name = data.azurerm_resource_group.rg.name
-  ttl                 = 15
-  records             = [azurerm_public_ip.ingress.ip_address]
-}
-
 # Postgres server
 resource "azurerm_postgresql_flexible_server" "pg" {
   name                = "${var.prefix}pg"
@@ -99,6 +81,12 @@ resource "azurerm_postgresql_flexible_server" "pg" {
 
   authentication {
     password_auth_enabled = true
+  }
+
+  lifecycle {
+    ignore_changes = [
+      zone
+    ]
   }
 }
 
@@ -118,14 +106,3 @@ resource "azurerm_postgresql_flexible_server_firewall_rule" "allow_all" {
   start_ip_address = "0.0.0.0"
   end_ip_address   = "255.255.255.255"
 }
-
-
-# Allow AKS managed identity to manage DNS records (for external-dns)
-resource "azurerm_role_assignment" "aks_dns_contributor" {
-  scope                = data.azurerm_dns_zone.chat.id
-  role_definition_name = "DNS Zone Contributor"
-  principal_id         = azurerm_kubernetes_cluster.aks.identity[0].principal_id
-  
-  depends_on = [azurerm_kubernetes_cluster.aks]
-}
-

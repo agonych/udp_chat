@@ -10,8 +10,17 @@ Push-Location $TfDir
 
 # Initialize and apply Terraform configuration
 terraform init -upgrade
-terraform apply -auto-approve
-Write-Host "OK: Infra is up"
+
+# Phase 1: build base Azure infra (AKS/ACR/PG/IP), skip Kubernetes/Helm
+terraform apply -auto-approve -input=false -var enable_k8s=false
+
+# Phase 2: deploy Kubernetes/Helm/DNS now that AKS API is ready
+terraform apply -auto-approve -input=false -var enable_k8s=true
+
+# Phase 3: create ClusterIssuer after CRDs are present
+terraform apply -auto-approve -input=false -var enable_k8s=true -var enable_clusterissuer=true
+
+Write-Host "OK: Infra is up (base + k8s)"
 
 # Return to the original directory
 Pop-Location

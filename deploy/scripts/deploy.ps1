@@ -46,6 +46,17 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RepoRoot  = Resolve-Path (Join-Path $ScriptDir '..\..')
 $ChartDir  = Resolve-Path (Join-Path $RepoRoot 'deploy\helm\chart')
 
+# Terraform outputs for ACR and DNS
+$TfDir = Resolve-Path (Join-Path $RepoRoot 'deploy\terraform')
+$AcrLoginServer = ''
+$DnsZoneName = ''
+try {
+  Push-Location $TfDir
+  $AcrLoginServer = terraform output -raw acr_login_server 2>$null
+  $DnsZoneName = terraform output -raw dns_zone_name 2>$null
+} catch {}
+finally { Pop-Location }
+
 # Namespaces
 switch ($Environment) {
   'testing' { $Namespace = 'udpchat-testing'; if (-not $ReleaseName) { $ReleaseName = 'udpchat-testing' } }
@@ -69,13 +80,25 @@ function Invoke-HelmDeploy {
 
   $args = @('upgrade','--install',$Rel,$ChartDir,
             '--namespace',$Ns,
+            '--create-namespace',
             '-f', (Join-Path $ChartDir $ValuesFile),
             '--set', "deployTarget=$Target")
 
-  # Set image tags
-  $args += @('--set', "images.server=udpchatacr.azurecr.io/server:$Tag")
-  $args += @('--set', "images.connector=udpchatacr.azurecr.io/connector:$Tag")
-  $args += @('--set', "images.client=udpchatacr.azurecr.io/client:$Tag")
+  # Set image registry/tags from Terraform outputs if available
+  if ($AcrLoginServer) {
+    $args += @('--set', "images.server=$AcrLoginServer/server:$Tag")
+    $args += @('--set', "images.connector=$AcrLoginServer/connector:$Tag")
+    $args += @('--set', "images.client=$AcrLoginServer/client:$Tag")
+    if ($Target -eq 'testing') {
+      $args += @('--set', "testServer.image.repository=$AcrLoginServer/test-server")
+      $args += @('--set', "testServer.image.tag=$Tag")
+    }
+  }
+
+  # Set domain from Terraform DNS zone if available
+  if ($DnsZoneName) {
+    $args += @('--set', "domain=$DnsZoneName")
+  }
   if ($Set) { foreach ($kv in $Set) { $args += @('--set', $kv) } }
   if ($Wait) { $args += @('--wait','--timeout','10m') }
 

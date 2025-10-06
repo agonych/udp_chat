@@ -64,17 +64,21 @@ terraform init
 terraform init -upgrade
 ```
 
-### 2. Plan Deployment
+### 2. Three-phase Plan/Apply
 ```bash
-terraform plan
+# Phase 1: Base Azure infra only (AKS/ACR/Postgres/IP)
+terraform plan -var enable_k8s=false
+terraform apply --auto-approve -var enable_k8s=false
+
+# Phase 2: Kubernetes/Helm/DNS (requires AKS to exist)
+terraform plan -var enable_k8s=true
+terraform apply --auto-approve -var enable_k8s=true
+
+# Phase 3: cert-manager ClusterIssuer (ACME)
+terraform apply --auto-approve -var enable_k8s=true -var enable_clusterissuer=true
 ```
 
-### 3. Apply Configuration
-```bash
-terraform apply
-```
-
-### 4. Configure kubectl
+### 3. Configure kubectl (optional)
 ```bash
 # Get AKS credentials
 az aks get-credentials --resource-group $(terraform output -raw resource_group) --name $(terraform output -raw aks_name)
@@ -167,8 +171,12 @@ terraform fmt -check
 
 ## Cleanup
 
-To destroy all resources:
+To destroy all resources (two phases, ordered to avoid provider issues):
 
 ```bash
-terraform destroy
+# Phase 1: remove Kubernetes/Helm/DNS and ClusterIssuer
+terraform destroy --auto-approve -var enable_k8s=true -var enable_clusterissuer=true
+
+# Phase 2: remove base Azure infra
+terraform destroy --auto-approve -var enable_k8s=false
 ```

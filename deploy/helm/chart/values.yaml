@@ -81,9 +81,9 @@ prod:
 # Images (set connector & udp via deploy script/--set)
 # =========================================================
 images:
-  nginx: "udpchatacr.azurecr.io/client:latest"
-  connector: "udpchatacr.azurecr.io/connector:latest"
-  udp: "udpchatacr.azurecr.io/server:latest"
+  nginx: "udpchatnewacr.azurecr.io/client:latest"
+  connector: "udpchatnewacr.azurecr.io/connector:latest"
+  udp: "udpchatnewacr.azurecr.io/server:latest"
 
 # =========================================================
 # NGINX (frontend + runtime /api/config)

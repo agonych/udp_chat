@@ -5,38 +5,39 @@ This directory contains deployment scripts for both Windows (PowerShell) and Lin
 ## Available Scripts
 
 ### 1. Infrastructure Up Script (`infra-up.ps1` / `infra-up.sh`)
-Deploys the infrastructure using Terraform.
+Deploys the infrastructure using Terraform in two phases.
 
 **Windows (PowerShell):**
 ```powershell
-.\deploy\scripts\infra-up.ps1 [-TerraformDir <path>] [-Help]
+.\deploy\scripts\infra-up.ps1
 ```
 
 **Linux (Bash):**
 ```bash
-./deploy/scripts/infra-up.sh [-d <path>] [-h]
+./deploy/scripts/infra-up.sh
 ```
 
-**Options:**
-- `-TerraformDir <path>` / `-d <path>` - Terraform directory path
-- `-Help` / `-h` - Show help message
+This runs:
+- Phase 1: `terraform apply` (Azure infra only: AKS/ACR/Postgres/Static IP)
+- Phase 2: `terraform apply -var enable_k8s=true` (Kubernetes + Helm + DNS)
+- Phase 3: `terraform apply -var enable_k8s=true -var enable_clusterissuer=true` (ClusterIssuer)
 
 ### 2. Infrastructure Down Script (`infra-down.ps1` / `infra-down.sh`)
-Destroys the infrastructure using Terraform.
+Destroys the infrastructure using Terraform in two phases (reverse order).
 
 **Windows (PowerShell):**
 ```powershell
-.\deploy\scripts\infra-down.ps1 [-TerraformDir <path>] [-Help]
+.\deploy\scripts\infra-down.ps1
 ```
 
 **Linux (Bash):**
 ```bash
-./deploy/scripts/infra-down.sh [-d <path>] [-h]
+./deploy/scripts/infra-down.sh
 ```
 
-**Options:**
-- `-TerraformDir <path>` / `-d <path>` - Terraform directory path
-- `-Help` / `-h` - Show help message
+This runs:
+- Phase 1: `terraform destroy -var enable_k8s=true -var enable_clusterissuer=true` (Kubernetes + Helm + DNS + Issuer)
+- Phase 2: `terraform destroy -var enable_k8s=false` (Azure infra)
 
 ### 3. Build and Push Script (`build-and-push.ps1` / `build-and-push.sh`)
 Builds and pushes Docker images to Azure Container Registry.
@@ -59,51 +60,11 @@ Builds and pushes Docker images to Azure Container Registry.
 - `connector` - WebSocket connector
 - `client` - Frontend application
 
-### 4. Setup Ingress Script (`setup-ingress.ps1` / `setup-ingress.sh`)
-Sets up the ingress-nginx controller with static IP binding.
+Notes:
+- The previous `setup-ingress` and `get-ssl` scripts are no longer required; ingress-nginx and cert-manager are provisioned by Terraform.
+- AKS Standard LB is pre-configured (externalTrafficPolicy=Local). No manual NSG steps needed.
 
-**Windows (PowerShell):**
-```powershell
-.\deploy\scripts\setup-ingress.ps1 [-Namespace <ns>] [-Release <name>] [-TerraformDir <path>] [-NodeResourceGroup <rg>] [-DryRun] [-Help]
-```
-
-**Linux (Bash):**
-```bash
-./deploy/scripts/setup-ingress.sh [-n <ns>] [-r <name>] [-d <path>] [-g <rg>] [--dry-run] [-h]
-```
-
-**Options:**
-- `-Namespace <ns>` / `-n <ns>` - Kubernetes namespace (default: ingress-nginx)
-- `-Release <name>` / `-r <name>` - Helm release name (default: ingress-nginx)
-- `-TerraformDir <path>` / `-d <path>` - Terraform directory path
-- `-NodeResourceGroup <rg>` / `-g <rg>` - AKS node resource group
-- `-DryRun` / `--dry-run` - Show commands without executing
-- `-Help` / `-h` - Show help message
-
-**Features:**
-- Discovers Terraform outputs (IP, resource groups)
-- Sets up kubeconfig for AKS
-- Installs ingress-nginx with static IP binding
-- Configures load balancer backend pool
-- Sets up NSG rules for HTTP/HTTPS traffic
-
-### 5. Get SSL Script (`get-ssl.ps1` / `get-ssl.sh`)
-Obtains SSL certificates using cert-manager and Let's Encrypt.
-
-**Windows (PowerShell):**
-```powershell
-.\deploy\scripts\get-ssl.ps1 [-Help]
-```
-
-**Linux (Bash):**
-```bash
-./deploy/scripts/get-ssl.sh [-h]
-```
-
-**Options:**
-- `-Help` / `-h` - Show help message
-
-### 6. Deploy Script (`deploy.ps1` / `deploy.sh`)
+### 4. Deploy Script (`deploy.ps1` / `deploy.sh`)
 Deploys the UDP Chat application to different environments.
 
 **Windows (PowerShell):**
@@ -132,7 +93,7 @@ Deploys the UDP Chat application to different environments.
 - `-Wait` / `-w` - Wait for deployment to complete
 - `-Help` / `-h` - Show help message
 
-### 7. Remove Script (`remove.ps1` / `remove.sh`)
+### 5. Remove Script (`remove.ps1` / `remove.sh`)
 Removes deployments from different environments.
 
 **Windows (PowerShell):**
@@ -203,16 +164,12 @@ The application supports blue/green deployment strategy:
 ```bash
 # Linux
 ./infra-up.sh
-./setup-ingress.sh
-./get-ssl.sh
 
 # Windows
 .\infra-up.ps1
-.\setup-ingress.ps1
-.\get-ssl.ps1
 ```
 
-### 2. Application Deployment
+### 2. Application Deployment (testing uses HTTPS by default)
 ```bash
 # Linux
 ./build-and-push.sh
@@ -252,8 +209,6 @@ The application supports blue/green deployment strategy:
 ```bash
 # Complete setup from scratch
 ./infra-up.sh
-./setup-ingress.sh
-./get-ssl.sh
 ./build-and-push.sh
 ./deploy.sh -e testing -w
 

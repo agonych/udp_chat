@@ -87,6 +87,15 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 CHART_DIR="$REPO_ROOT/deploy/helm/chart"
 
+# Read Terraform outputs for ACR and DNS
+TF_DIR="$REPO_ROOT/deploy/terraform"
+if [[ -d "$TF_DIR" ]]; then
+    pushd "$TF_DIR" >/dev/null
+    ACR_LOGIN_SERVER=$(terraform output -raw acr_login_server 2>/dev/null || true)
+    DNS_ZONE_NAME=$(terraform output -raw dns_zone_name 2>/dev/null || true)
+    popd >/dev/null
+fi
+
 # Determine namespace and release names
 case "$ENVIRONMENT" in
     testing)
@@ -124,10 +133,22 @@ helm_deploy() {
     
     local helm_args=("upgrade" "--install" "$release" "$CHART_DIR" "--namespace" "$namespace" "-f" "$values_file" "--set" "deployTarget=$target")
     
-    # Set image tags
-    helm_args+=("--set" "images.server=udpchatacr.azurecr.io/server:$TAG")
-    helm_args+=("--set" "images.connector=udpchatacr.azurecr.io/connector:$TAG")
-    helm_args+=("--set" "images.client=udpchatacr.azurecr.io/client:$TAG")
+    # Set image registries from Terraform outputs if available
+    if [[ -n "$ACR_LOGIN_SERVER" ]]; then
+        helm_args+=("--set" "images.server=$ACR_LOGIN_SERVER/server:$TAG")
+        helm_args+=("--set" "images.connector=$ACR_LOGIN_SERVER/connector:$TAG")
+        helm_args+=("--set" "images.client=$ACR_LOGIN_SERVER/client:$TAG")
+        # Testing-only test-server image override
+        if [[ "$target" == "testing" ]]; then
+            helm_args+=("--set" "testServer.image.repository=$ACR_LOGIN_SERVER/test-server")
+            helm_args+=("--set" "testServer.image.tag=$TAG")
+        fi
+    fi
+
+    # Set domain from Terraform DNS zone, if available
+    if [[ -n "$DNS_ZONE_NAME" ]]; then
+        helm_args+=("--set" "domain=$DNS_ZONE_NAME")
+    fi
     
     if [[ "$WAIT" == true ]]; then
         helm_args+=("--wait" "--timeout" "10m")
