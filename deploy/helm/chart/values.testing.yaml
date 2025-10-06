@@ -14,6 +14,9 @@ testServer:
 testing:
   enableDb: true
   tlsEnabled: true
+  db:
+    # Use DB_PASSWORD key from udpchat-app secret for Postgres password
+    passwordKey: DB_PASSWORD
 
 # Use fewer replicas by default in testing
 nginx:
@@ -37,9 +40,10 @@ udp:
     DB_USER: "udpchat"
     AI_MODE: "gpt"
 
-# For testing, let Helm create the app secret so deploys are repeatable
+# For testing, use pre-applied secret.testing.yaml (existing secret)
 existingAppSecret:
-  enabled: false
+  enabled: true
+  name: udpchat-app
 
 # Certificate defaults for testing (HTTP-01 via ClusterIssuer)
 certificate:

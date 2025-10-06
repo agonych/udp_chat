@@ -1,4 +1,7 @@
 {{- if and (.Values.testing.enableDb) (include "udpchat.isTesting" . | eq "true") }}
+{{- /* Safely normalize secret value maps to avoid nil deref when missing */ -}}
+{{- $existing := default (dict "enabled" false "name" "") .Values.existingAppSecret -}}
+{{- $app := default (dict "enabled" false "name" "udpchat-app") .Values.appSecret -}}
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -51,12 +54,12 @@ spec:
                   # 1) existingAppSecret.name if enabled
                   # 2) appSecret.name if enabled
                   # 3) fallback to "postgres-testing"
-                  name: {{ if .Values.existingAppSecret.enabled }}{{ .Values.existingAppSecret.name | quote }}{{ else if .Values.appSecret.enabled }}{{ default "udpchat-app" .Values.appSecret.name | quote }}{{ else }}"postgres-testing"{{ end }}
+                  name: {{ if $existing.enabled }}{{ $existing.name | quote }}{{ else if $app.enabled }}{{ $app.name | quote }}{{ else }}"postgres-testing"{{ end }}
                   key: {{ default "POSTGRES_PASSWORD" .Values.testing.db.passwordKey | quote }}
-          {{- if or .Values.existingAppSecret.enabled .Values.appSecret.enabled }}
+          {{- if or $existing.enabled $app.enabled }}
           envFrom:
             - secretRef:
-                name: {{ if .Values.existingAppSecret.enabled }}{{ .Values.existingAppSecret.name | quote }}{{ else }}{{ default "udpchat-app" .Values.appSecret.name | quote }}{{ end }}
+                name: {{ if $existing.enabled }}{{ $existing.name | quote }}{{ else }}{{ $app.name | quote }}{{ end }}
           {{- end }}
           readinessProbe:
             exec:

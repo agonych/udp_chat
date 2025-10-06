@@ -111,6 +111,17 @@ Write-Host ("Environment: {0}" -f $Environment)
 Write-Host ("Release: {0}" -f $ReleaseName)
 Write-Host ("Namespace: {0}" -f $Namespace)
 
+# Apply environment-specific secret if present
+try {
+  if ($Environment -eq 'testing') {
+    $st = Join-Path $ChartDir 'secret.testing.yaml'
+    if (Test-Path $st) { kubectl -n $Namespace apply -f $st | Out-Null }
+  } else {
+    $sp = Join-Path $ChartDir 'secret.yaml'
+    if (Test-Path $sp) { kubectl -n $Namespace apply -f $sp | Out-Null }
+  }
+} catch {}
+
 if ($Environment -eq 'testing') {
   Invoke-HelmDeploy -Rel $ReleaseName -Ns $Namespace -Target 'testing' -ValuesFile 'values.testing.yaml'
 } elseif ($Environment -eq 'both') {

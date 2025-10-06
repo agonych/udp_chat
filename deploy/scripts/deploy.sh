@@ -167,6 +167,17 @@ echo "Namespace: $NAMESPACE"
 # Ensure namespace exists
 kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f - > /dev/null
 
+# Apply environment-specific secret if present
+if [[ "$ENVIRONMENT" == "testing" ]]; then
+    if [[ -f "$CHART_DIR/secret.testing.yaml" ]]; then
+        kubectl -n "$NAMESPACE" apply -f "$CHART_DIR/secret.testing.yaml" >/dev/null || true
+    fi
+else
+    if [[ -f "$CHART_DIR/secret.yaml" ]]; then
+        kubectl -n "$NAMESPACE" apply -f "$CHART_DIR/secret.yaml" >/dev/null || true
+    fi
+fi
+
 # Deploy based on environment
 if [[ "$ENVIRONMENT" == "testing" ]]; then
     helm_deploy "$RELEASE_NAME" "$NAMESPACE" "testing" "values.testing.yaml"

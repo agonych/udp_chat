@@ -67,14 +67,15 @@ terraform init -upgrade
 ### 2. Three-phase Plan/Apply
 ```bash
 # Phase 1: Base Azure infra only (AKS/ACR/Postgres/IP)
-terraform plan -var enable_k8s=false
-terraform apply --auto-approve -var enable_k8s=false
+terraform plan
+terraform apply --auto-approve
 
 # Phase 2: Kubernetes/Helm/DNS (requires AKS to exist)
 terraform plan -var enable_k8s=true
 terraform apply --auto-approve -var enable_k8s=true
 
 # Phase 3: cert-manager ClusterIssuer (ACME)
+terraform plan -var enable_k8s=true -var enable_clusterissuer=true
 terraform apply --auto-approve -var enable_k8s=true -var enable_clusterissuer=true
 ```
 
