@@ -165,6 +165,12 @@ jobs:
         run: |
           kubectl create namespace udpchat-prod --dry-run=client -o yaml | kubectl apply -f -
       
+      - name: Clean up old monitoring ingresses
+        run: |
+          # Delete any existing monitoring ingresses to avoid conflicts
+          kubectl delete ingress -n udpchat-prod -l app.kubernetes.io/component=grafana --ignore-not-found=true
+          kubectl delete ingress -n udpchat-prod -l app.kubernetes.io/component=prometheus --ignore-not-found=true
+      
       - name: Determine inactive color
         id: color
         run: |
@@ -217,6 +223,21 @@ jobs:
             --wait \
             --timeout 10m
       
+      - name: Update www and monitoring ingresses
+        working-directory: ./deploy/helm/chart
+        run: |
+          # Get current active color again
+          ACTIVE=$(kubectl -n udpchat-prod get ingress udpchat-www-www -o jsonpath='{.metadata.labels.app\.kubernetes\.io/color}' 2>/dev/null || echo "green")
+          
+          # Deploy www target to update ingresses for the active color
+          helm upgrade --install udpchat-www . \
+            --namespace udpchat-prod \
+            -f values.prod.yaml \
+            --set deployTarget=www \
+            --set activeColor=$ACTIVE \
+            --wait \
+            --timeout 5m
+      
       - name: Deployment status
         if: always()
         env:
@@ -236,11 +257,12 @@ jobs:
           kubectl get svc -n udpchat-prod -l app.kubernetes.io/color=$COLOR >> $GITHUB_STEP_SUMMARY 2>&1 || true
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Monitoring ($COLOR environment)" >> $GITHUB_STEP_SUMMARY
-          echo "- **Grafana**: https://grafana-$COLOR.chat.kudriavcev.info" >> $GITHUB_STEP_SUMMARY
-          echo "- **Prometheus**: https://prometheus-$COLOR.chat.kudriavcev.info" >> $GITHUB_STEP_SUMMARY
+          echo "### Monitoring (points to active color)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Grafana**: https://grafana.chat.kudriavcev.info" >> $GITHUB_STEP_SUMMARY
+          echo "- **Prometheus**: https://prometheus.chat.kudriavcev.info" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
-          echo "- Test the $COLOR environment" >> $GITHUB_STEP_SUMMARY
-          echo "- Use \`./deploy/scripts/set-active.sh $COLOR\` to switch traffic" >> $GITHUB_STEP_SUMMARY
+          echo "- Test the **$COLOR** environment at: https://$COLOR.chat.kudriavcev.info" >> $GITHUB_STEP_SUMMARY
+          echo "- When ready, switch traffic: \`./deploy/scripts/set-active.sh $COLOR\`" >> $GITHUB_STEP_SUMMARY
+          echo "- After switch, monitoring will point to $COLOR" >> $GITHUB_STEP_SUMMARY
 
