@@ -1,7 +1,7 @@
 # =========================================================
 # Global / shared defaults
 # =========================================================
-domain: "chat.kudriavcev.com"
+domain: "chat.kudriavcev.info"
 
 # What slice to render (scripts set this per release):
 #   testing | blue | green | both | www

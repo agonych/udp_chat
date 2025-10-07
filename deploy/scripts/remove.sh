@@ -97,9 +97,12 @@ case "$ENVIRONMENT" in
         ;;
     active)
         NAMESPACE="udpchat-prod"
-        RELEASE_NAME="udpchat-green"  # Currently active color
+        # Detect current active via www ingress label; default green if unknown
+        ACTIVE=$(kubectl -n "$NAMESPACE" get ingress udpchat-www-www -o jsonpath='{.metadata.labels.app\.kubernetes\.io/color}' 2>/dev/null || true)
+        if [[ -z "$ACTIVE" ]]; then ACTIVE="green"; fi
+        RELEASE_NAME="udpchat-$ACTIVE"
         echo -e "${RED}WARNING: You are removing the ACTIVE environment (green)!${NC}"
-        echo -e "${RED}This will take down production traffic at www.chat.kudriavcev.com${NC}"
+        echo -e "${RED}This will take down production traffic at www.chat.kudriavcev.info${NC}"
         read -p "Are you sure you want to continue? (yes/no): " confirm
         if [[ "$confirm" != "yes" ]]; then
             echo -e "${YELLOW}Operation cancelled.${NC}"
@@ -108,7 +111,9 @@ case "$ENVIRONMENT" in
         ;;
     inactive)
         NAMESPACE="udpchat-prod"
-        RELEASE_NAME="udpchat-blue"   # Currently inactive color
+        ACTIVE=$(kubectl -n "$NAMESPACE" get ingress udpchat-www-www -o jsonpath='{.metadata.labels.app\.kubernetes\.io/color}' 2>/dev/null || true)
+        if [[ -z "$ACTIVE" ]]; then ACTIVE="green"; fi
+        if [[ "$ACTIVE" == "green" ]]; then RELEASE_NAME="udpchat-blue"; else RELEASE_NAME="udpchat-green"; fi
         ;;
 esac
 

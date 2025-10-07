@@ -186,19 +186,24 @@ elif [[ "$ENVIRONMENT" == "both" ]]; then
     helm_deploy "udpchat-blue" "$NAMESPACE" "blue" "values.prod.yaml"
     helm_deploy "udpchat-green" "$NAMESPACE" "green" "values.prod.yaml"
 else
-    # Map active/inactive to actual colors
-    local target
+    # Determine current active colour from www ingress label if present
+    ACTIVE=$(kubectl -n "$NAMESPACE" get ingress udpchat-www-www -o jsonpath='{.metadata.labels.app\.kubernetes\.io/color}' 2>/dev/null || true)
+    if [[ -z "$ACTIVE" ]]; then ACTIVE="green"; fi
+
+    # Map active/inactive dynamically
     case "$ENVIRONMENT" in
         active)
-            target="green"
+            target="$ACTIVE"
             ;;
         inactive)
-            target="blue"
+            if [[ "$ACTIVE" == "green" ]]; then target="blue"; else target="green"; fi
             ;;
         *)
             target="$ENVIRONMENT"
             ;;
     esac
+    # Align release name with target colour
+    RELEASE_NAME="udpchat-$target"
     helm_deploy "$RELEASE_NAME" "$NAMESPACE" "$target" "values.prod.yaml"
 fi
 

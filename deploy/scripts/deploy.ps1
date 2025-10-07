@@ -130,12 +130,23 @@ if ($Environment -eq 'testing') {
     Invoke-HelmDeploy -Rel $rel -Ns $Namespace -Target $color -ValuesFile 'values.prod.yaml'
   }
 } else {
-  # Map active/inactive to actual colors
+  # Determine current active colour from www ingress label if present
+  $ActiveColor = ''
+  try {
+    $ActiveColor = kubectl -n $Namespace get ingress udpchat-www-www -o jsonpath='{.metadata.labels.app\.kubernetes\.io/color}' 2>$null
+  } catch {}
+  if (-not $ActiveColor) { $ActiveColor = 'green' }
+
+  # Map active/inactive to actual colors dynamically
   $Target = switch ($Environment) {
-    'active' { 'green' }
-    'inactive' { 'blue' }
+    'active' { $ActiveColor }
+    'inactive' { if ($ActiveColor -eq 'green') { 'blue' } else { 'green' } }
     default { $Environment }
   }
+
+  # Ensure release aligns with target colour
+  $ReleaseName = "udpchat-$Target"
+
   Invoke-HelmDeploy -Rel $ReleaseName -Ns $Namespace -Target $Target -ValuesFile 'values.prod.yaml'
 }
 

@@ -63,6 +63,7 @@ Builds and pushes Docker images to Azure Container Registry.
 Notes:
 - The previous `setup-ingress` and `get-ssl` scripts are no longer required; ingress-nginx and cert-manager are provisioned by Terraform.
 - AKS Standard LB is pre-configured (externalTrafficPolicy=Local). No manual NSG steps needed.
+- Deploy scripts auto-apply environment secrets if present: `secret.testing.yaml` for testing, `secret.yaml` for prod.
 
 ### 4. Deploy Script (`deploy.ps1` / `deploy.sh`)
 Deploys the UDP Chat application to different environments.
@@ -119,6 +120,39 @@ Removes deployments from different environments.
 - `-Environment <env>` / `-e <env>` - Environment to remove
 - `-Help` / `-h` - Show help message
 
+Behavior details:
+- For prod, `active`/`inactive` are resolved dynamically from the `udpchat-www` ingress color label; `active` removal prompts for confirmation.
+
+### 6. Set Active (`set-active.ps1` / `set-active.sh`)
+Switches the active colour for `www` (blue|green|toggle).
+
+**Windows (PowerShell):**
+```powershell
+.\deploy\scripts\set-active.ps1 -Environment blue|green|toggle [-Wait]
+```
+
+**Linux (Bash):**
+```bash
+./deploy/scripts/set-active.sh blue|green|toggle [-w]
+```
+
+Notes:
+- Detects current active from the `udpchat-www` ingress label; `toggle` flips it.
+- Applies `deployTarget=www` and sets `activeColor` accordingly.
+
+### 7. Get Active (`get-active.ps1` / `get-active.sh`)
+Prints the current active colour (blue|green|unknown) by inspecting the `udpchat-www` ingress.
+
+**Windows (PowerShell):**
+```powershell
+.\deploy\scripts\get-active.ps1
+```
+
+**Linux (Bash):**
+```bash
+./deploy/scripts/get-active.sh
+```
+
 ## Prerequisites
 
 ### Windows
@@ -141,15 +175,20 @@ Removes deployments from different environments.
 
 The application supports blue/green deployment strategy:
 
-- **Blue Environment**: `blue.chat.kudriavcev.com`
-- **Green Environment**: `green.chat.kudriavcev.com`
-- **Production**: `www.chat.kudriavcev.com` (routes to active color)
+- **Blue Environment**: `blue.chat.kudriavcev.info`
+- **Green Environment**: `green.chat.kudriavcev.info`
+- **Production**: `www.chat.kudriavcev.info` (routes to the active colour)
 
-**Current Active Color**: Green (configured in `values.yaml`)
+**Check current active colour:**
+- Windows: `./deploy/scripts/get-active.ps1`
+- Linux: `./deploy/scripts/get-active.sh`
 
-**Switching Colors:**
-1. Update `activeColor` in `values.yaml`
-2. Redeploy www ingress: `helm upgrade --install udpchat-www deploy/helm/chart -n udpchat-prod -f deploy/helm/chart/values.prod.yaml --set deployTarget=www --wait`
+**Switching colours (no direct Helm needed):**
+- Windows: `./deploy/scripts/set-active.ps1 -Environment blue|green|toggle [-Wait]`
+- Linux: `./deploy/scripts/set-active.sh blue|green|toggle [-w]`
+
+Notes:
+- The scripts update the `www` ingress to point to the selected colour by setting `activeColor` for the `www` deploy target.
 
 ## Safety Features
 
@@ -185,8 +224,9 @@ The application supports blue/green deployment strategy:
 ### 3. Environment Management
 ```bash
 # Linux
-./deploy.sh -e active -t v1.2.3 -w  # Deploy to active environment
-./remove.sh -e inactive              # Remove inactive environment
+./deploy.sh -e active -t v1.2.3 -w    # Deploy to currently active colour
+./remove.sh -e inactive                # Remove inactive environment
+./set-active.sh toggle -w              # Flip www to the other colour
 
 # Windows
 .\deploy.ps1 -Environment active -Tag v1.2.3 -Wait
