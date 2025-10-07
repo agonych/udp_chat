@@ -1,20 +1,17 @@
-name: Backend Tests
+name: Testing CI
 
 on:
-  # Trigger on push to testing branch
   push:
     branches:
       - testing
-
-  # Allow manual trigger
   workflow_dispatch:
 
 jobs:
-  test:
-    name: Run Backend Tests
+  # Job 1: Run unit tests
+  unit-tests:
+    name: Unit Tests
     runs-on: ubuntu-latest
     
-    # PostgreSQL service container
     services:
       postgresql:
         image: postgres:16-alpine
@@ -39,7 +36,9 @@ jobs:
         with:
           python-version: '3.12'
           cache: 'pip'
-          cache-dependency-path: 'server/requirements.txt'
+          cache-dependency-path: |
+            server/requirements.txt
+            server/requirements-test.txt
       
       - name: Install dependencies
         working-directory: ./server
@@ -77,19 +76,143 @@ jobs:
           DB_PASSWORD: udpchat_password
           DATABASE_URL: postgresql://udpchat_user:udpchat_password@localhost:5432/postgres
       
-      - name: Upload coverage reports
+  # Job 2: Snyk dependency scan
+  snyk-scan:
+    name: Snyk Dependency Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Run Snyk to check Python dependencies
+        uses: snyk/actions/python@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --file=server/requirements.txt --severity-threshold=high --sarif-file-output=snyk-python.sarif
+      
+      - name: Upload Snyk results to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v3
         if: always()
+        with:
+          sarif_file: snyk-python.sarif
+          category: snyk-python
+
+  # Job 3: Build Docker images
+  build-images:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Build server image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./server
+          file: ./server/Dockerfile
+          push: false
+          load: true
+          tags: server:${{ github.sha }}
+          cache-from: type=gha,scope=server
+          cache-to: type=gha,mode=max,scope=server
+      
+      - name: Build connector image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./connector
+          file: ./connector/Dockerfile
+          push: false
+          load: true
+          tags: connector:${{ github.sha }}
+          cache-from: type=gha,scope=connector
+          cache-to: type=gha,mode=max,scope=connector
+      
+      - name: Build client image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./client
+          file: ./client/Dockerfile
+          push: false
+          load: true
+          tags: client:${{ github.sha }}
+          cache-from: type=gha,scope=client
+          cache-to: type=gha,mode=max,scope=client
+      
+      - name: Save Docker images
+        run: |
+          docker save server:${{ github.sha }} -o server-image.tar
+          docker save connector:${{ github.sha }} -o connector-image.tar
+          docker save client:${{ github.sha }} -o client-image.tar
+      
+      - name: Upload server image
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-report
-          path: |
-            server/htmlcov/
-            server/coverage.xml
-          retention-days: 30
+          name: server-image
+          path: server-image.tar
+          retention-days: 1
       
-      - name: Display test summary
-        if: always()
-        run: |
-          echo "## Test Results" >> $GITHUB_STEP_SUMMARY
-          echo "Check the uploaded coverage report for details." >> $GITHUB_STEP_SUMMARY
+      - name: Upload connector image
+        uses: actions/upload-artifact@v4
+        with:
+          name: connector-image
+          path: connector-image.tar
+          retention-days: 1
+      
+      - name: Upload client image
+        uses: actions/upload-artifact@v4
+        with:
+          name: client-image
+          path: client-image.tar
+          retention-days: 1
 
+  # Job 4: Docker Scout scan
+  docker-scout-scan:
+    name: Docker Scout Scan
+    runs-on: ubuntu-latest
+    needs: build-images
+    permissions:
+      contents: read
+      security-events: write
+    
+    strategy:
+      matrix:
+        service: [server, connector, client]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Download ${{ matrix.service }} image
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.service }}-image
+      
+      - name: Load Docker image
+        run: |
+          docker load -i ${{ matrix.service }}-image.tar
+      
+      - name: Run Docker Scout scan
+        uses: docker/scout-action@v1
+        with:
+          command: cves
+          image: udpchat-${{ matrix.service }}:${{ github.sha }}
+          only-severities: critical,high
+          exit-code: false
+          sarif-file: scout-${{ matrix.service }}.sarif
+      
+      - name: Upload Docker Scout results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: scout-${{ matrix.service }}.sarif
+          category: docker-scout-${{ matrix.service }}
