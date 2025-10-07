@@ -3,7 +3,7 @@ name: Production CI
 on:
   push:
     branches:
-      - production
+      - main
   workflow_dispatch:
 
 jobs:
@@ -235,6 +235,10 @@ jobs:
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           kubectl get svc -n udpchat-prod -l app.kubernetes.io/color=$COLOR >> $GITHUB_STEP_SUMMARY 2>&1 || true
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Monitoring ($COLOR environment)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Grafana**: https://grafana-$COLOR.chat.kudriavcev.info" >> $GITHUB_STEP_SUMMARY
+          echo "- **Prometheus**: https://prometheus-$COLOR.chat.kudriavcev.info" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
           echo "- Test the $COLOR environment" >> $GITHUB_STEP_SUMMARY
