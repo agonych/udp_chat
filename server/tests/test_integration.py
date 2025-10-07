@@ -20,7 +20,7 @@ class TestServerIntegration:
         """Test that the server can start up without errors."""
         # This is a basic test to ensure the server module can be imported
         # We'll test the class structure without instantiating it
-        from server import UDPChatServer
+        from server.server import UDPChatServer
         
         # Basic assertions about the class
         assert UDPChatServer is not None

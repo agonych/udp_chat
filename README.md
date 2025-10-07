@@ -25,13 +25,17 @@ deploy/     → Terraform + Helm + scripts for AKS deploys
 
 ---
 
-## Subproject READMEs
+## Module READMEs
 
-- [Client (React)](client/README.md)
-- [Connector (Node.js)](connector/README.md)
 - [Server (Python)](server/README.md)
-- [Deploy (Terraform/Helm/Scripts)](deploy/terraform/README.md)
-- [Scripts (infra-up/down, deploy, blue/green)](deploy/scripts/README.md)
+- [Connector (Node.js)](connector/README.md)
+- [Client (React)](client/README.md)
+- [Terraform](deploy/terraform/README.md)
+- [Deploy Scripts](deploy/scripts/README.md)
+- [GitHub Actions](.github/workflows/README.md)
+- [Helm Charts](deploy/helm/chart/README.md)
+- [Dockerfiles](deploy/docker/README.md)
+- [Kubernetes Manifests](deploy/k8s/README.md)
 
 ---
 

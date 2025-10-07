@@ -34,16 +34,22 @@ def test_db():
     # Use PostgreSQL test database
     test_db_name = f"udpchat_test_{os.getpid()}"
     
+    # Get database connection parameters from environment or use defaults
+    db_host = os.getenv('DB_HOST', 'postgresql')
+    db_port = int(os.getenv('DB_PORT', '5432'))
+    db_user = os.getenv('DB_USER', 'udpchat_user')
+    db_password = os.getenv('DB_PASSWORD', 'udpchat_password')
+    
     # Create test database
     import psycopg2
     from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
     
     # Connect to default postgres database to create test database
     conn = psycopg2.connect(
-        host="postgresql",  # Use container name instead of localhost
-        port=5432,
-        user="udpchat_user",
-        password="udpchat_password",
+        host=db_host,
+        port=db_port,
+        user=db_user,
+        password=db_password,
         database="postgres"
     )
     conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
@@ -57,7 +63,7 @@ def test_db():
     conn.close()
     
     # Set up test database URL AFTER creating the database
-    os.environ['DATABASE_URL'] = f"postgresql://udpchat_user:udpchat_password@postgresql:5432/{test_db_name}"
+    os.environ['DATABASE_URL'] = f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{test_db_name}"
     
     # Import and initialize database with test database
     from db import init_db
@@ -67,10 +73,10 @@ def test_db():
     
     # Cleanup - drop test database
     conn = psycopg2.connect(
-        host="postgresql",  # Use container name instead of localhost
-        port=5432,
-        user="udpchat_user",
-        password="udpchat_password",
+        host=db_host,
+        port=db_port,
+        user=db_user,
+        password=db_password,
         database="postgres"
     )
     conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
