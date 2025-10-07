@@ -298,3 +298,78 @@ jobs:
           docker push $ACR_LOGIN_SERVER/$SERVICE:testing-latest
           
           echo "Pushed $SERVICE:$SHA_TAG and $SERVICE:testing-latest to ACR"
+
+  # Job 6: Deploy to Testing Environment
+  deploy-testing:
+    name: Deploy to Testing
+    runs-on: ubuntu-latest
+    needs: push-to-acr
+    environment: Production
+    permissions:
+      id-token: write
+      contents: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      
+      - name: Get AKS credentials
+        run: |
+          az aks get-credentials --resource-group udpchatnew --name udpchatnewaks --overwrite-existing
+      
+      - name: Install Helm
+        uses: azure/setup-helm@v4.3.0
+        with:
+          version: 'latest'
+      
+      - name: Create namespace if not exists
+        run: |
+          kubectl create namespace udpchat-testing --dry-run=client -o yaml | kubectl apply -f -
+      
+      - name: Apply secrets
+        working-directory: ./deploy/helm/chart
+        run: |
+          if [ -f secret.testing.yaml ]; then
+            kubectl -n udpchat-testing apply -f secret.testing.yaml || true
+          fi
+      
+      - name: Deploy with Helm
+        working-directory: ./deploy/helm/chart
+        env:
+          ACR_LOGIN_SERVER: udpchatnewacr.azurecr.io
+          TAG: testing-latest
+        run: |
+          helm upgrade --install udpchat-testing . \
+            --namespace udpchat-testing \
+            -f values.testing.yaml \
+            --set deployTarget=testing \
+            --set images.server=$ACR_LOGIN_SERVER/server:$TAG \
+            --set images.connector=$ACR_LOGIN_SERVER/connector:$TAG \
+            --set images.client=$ACR_LOGIN_SERVER/client:$TAG \
+            --wait \
+            --timeout 10m
+      
+      - name: Deployment status
+        if: always()
+        run: |
+          echo "## Deployment Status" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          kubectl get pods -n udpchat-testing >> $GITHUB_STEP_SUMMARY 2>&1 || true
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Services" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          kubectl get svc -n udpchat-testing >> $GITHUB_STEP_SUMMARY 2>&1 || true
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Ingress" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          kubectl get ingress -n udpchat-testing >> $GITHUB_STEP_SUMMARY 2>&1 || true
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
