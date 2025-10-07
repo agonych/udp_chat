@@ -1,0 +1,95 @@
+name: Backend Tests
+
+on:
+  # Trigger on push to testing branch
+  push:
+    branches:
+      - testing
+
+  # Allow manual trigger
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Run Backend Tests
+    runs-on: ubuntu-latest
+    
+    # PostgreSQL service container
+    services:
+      postgresql:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: udpchat_user
+          POSTGRES_PASSWORD: udpchat_password
+          POSTGRES_DB: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: 'server/requirements.txt'
+      
+      - name: Install dependencies
+        working-directory: ./server
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-test.txt
+      
+      - name: Set up environment variables
+        run: |
+          echo "DB_HOST=localhost" >> $GITHUB_ENV
+          echo "DB_PORT=5432" >> $GITHUB_ENV
+          echo "DB_NAME=postgres" >> $GITHUB_ENV
+          echo "DB_USER=udpchat_user" >> $GITHUB_ENV
+          echo "DB_PASSWORD=udpchat_password" >> $GITHUB_ENV
+          echo "DEBUG=False" >> $GITHUB_ENV
+      
+      - name: Wait for PostgreSQL
+        run: |
+          until pg_isready -h localhost -p 5432 -U udpchat_user; do
+            echo "Waiting for PostgreSQL to be ready..."
+            sleep 2
+          done
+        env:
+          PGPASSWORD: udpchat_password
+      
+      - name: Run tests
+        working-directory: ./server
+        run: |
+          python run_tests.py
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USER: udpchat_user
+          DB_PASSWORD: udpchat_password
+          DATABASE_URL: postgresql://udpchat_user:udpchat_password@localhost:5432/postgres
+      
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: |
+            server/htmlcov/
+            server/coverage.xml
+          retention-days: 30
+      
+      - name: Display test summary
+        if: always()
+        run: |
+          echo "## Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "Check the uploaded coverage report for details." >> $GITHUB_STEP_SUMMARY
+
