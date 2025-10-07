@@ -1,6 +1,5 @@
 {{- if and (include "udpchat.isTesting" . | ne "true") (eq (include "udpchat.currentColour" .) "green") }}
 {{- $nginx := printf "%s-green" "nginx" -}}
-{{- $conn  := printf "%s-green" "connector" -}}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -29,10 +28,5 @@ spec:
               service:
                 name: {{ $nginx }}
                 port: { number: 80 }
-          - path: /ws
-            pathType: Prefix
-            backend:
-              service:
-                name: {{ $conn }}
-                port: { number: {{ default 8001 .Values.connector.port }} }
+          # All paths go to client NGINX; client proxies /ws, /grafana/, /prom/
 {{- end }}

@@ -83,8 +83,15 @@ class UDPChatServer:
             print("Database connection established")
             
             # Start Prometheus metrics server
-            # start_metrics_server()  # Temporarily disabled due to port conflict
-            print("Prometheus metrics server disabled")
+            try:
+                print("Attempting to start metrics server...")
+                start_metrics_server()  # Start metrics server on port 8000
+                print("Prometheus metrics server started on port 8000")
+            except Exception as e:
+                print(f"Failed to start metrics server: {e}")
+                import traceback
+                traceback.print_exc()
+                # Don't fail the entire server if metrics fail
             
             # Bind the shutdown event
             self.shutdown_event = threading.Event()

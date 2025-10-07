@@ -55,16 +55,14 @@ spec:
       containers:
         - name: udp-server
           image: {{ include "udpchat.image.udp" . }}
-          imagePullPolicy: {{ default "IfNotPresent" .Values.udp.imagePullPolicy }}
+          imagePullPolicy: Always
           ports:
             - name: udp
               containerPort: {{ default 9999 .Values.udp.port }}
               protocol: UDP
-            {{- if .Values.udp.httpStatus.enabled }}
-            - name: http-status
-              containerPort: {{ default 8080 .Values.udp.httpStatus.port }}
+            - name: metrics
+              containerPort: 8000
               protocol: TCP
-            {{- end }}
           env:
             {{- if .Values.udp.httpStatus.enabled }}
             - name: STATUS_PORT
@@ -82,24 +80,6 @@ spec:
           args:
           {{- range $a := (default list .Values.udp.args) }}
             - {{ $a | quote }}
-          {{- end }}
-          {{- if .Values.udp.httpStatus.enabled }}
-          readinessProbe:
-            httpGet:
-              path: {{ default "/healthz" .Values.udp.httpStatus.path | quote }}
-              port: {{ default 8080 .Values.udp.httpStatus.port }}
-            initialDelaySeconds: {{ default 5 .Values.udp.readiness.initialDelaySeconds }}
-            periodSeconds: {{ default 10 .Values.udp.readiness.periodSeconds }}
-            timeoutSeconds: {{ default 2 .Values.udp.readiness.timeoutSeconds }}
-            failureThreshold: {{ default 3 .Values.udp.readiness.failureThreshold }}
-          livenessProbe:
-            httpGet:
-              path: {{ default "/healthz" .Values.udp.httpStatus.path | quote }}
-              port: {{ default 8080 .Values.udp.httpStatus.port }}
-            initialDelaySeconds: {{ default 15 .Values.udp.liveness.initialDelaySeconds }}
-            periodSeconds: {{ default 20 .Values.udp.liveness.periodSeconds }}
-            timeoutSeconds: {{ default 2 .Values.udp.liveness.timeoutSeconds }}
-            failureThreshold: {{ default 3 .Values.udp.liveness.failureThreshold }}
           {{- end }}
           resources:
             {{- toYaml (default dict .Values.udp.resources) | nindent 12 }}

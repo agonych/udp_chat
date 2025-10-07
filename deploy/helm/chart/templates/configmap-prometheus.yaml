@@ -22,17 +22,19 @@ data:
         static_configs:
           - targets: ['localhost:9090']
 
-      # UDP Chat Server
+      # UDP Chat Server (metrics on port 8000)
       - job_name: 'udpchat-server'
         static_configs:
-          - targets: ['{{ include "udpchat.name.udp" . }}:{{ default 8080 .Values.udp.httpStatus.port }}']
-        scrape_interval: 5s
+          - targets: ['{{ include "udpchat.name.udp" . }}:8000']
+        scrape_interval: 15s
         metrics_path: '/metrics'
+        scrape_timeout: 5s
 
-      # UDP Chat Connector
+      # UDP Chat Connector (metrics on port 3000)
       - job_name: 'udpchat-connector'
         static_configs:
-          - targets: ['{{ include "udpchat.name.connector" . }}:{{ default 8001 .Values.connector.port }}']
-        scrape_interval: 5s
+          - targets: ['{{ include "udpchat.name.connector" . }}:3000']
+        scrape_interval: 15s
         metrics_path: '/metrics'
+        scrape_timeout: 5s
 {{- end }}

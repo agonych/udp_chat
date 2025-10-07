@@ -42,4 +42,6 @@ udp:
     DB_USER: "pgadmin"
   resources: {}
   httpStatus:
-    enabled: false  # flip to true for an HTTP health endpoint in prod
+    enabled: true  # enable HTTP port for metrics
+    port: 8080
+    path: "/healthz"

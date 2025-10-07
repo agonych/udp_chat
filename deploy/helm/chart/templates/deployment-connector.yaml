@@ -56,6 +56,9 @@ spec:
             - name: ws
               containerPort: {{ default 8001 .Values.connector.port }}
               protocol: TCP
+            - name: metrics
+              containerPort: 3000
+              protocol: TCP
           env:
             # Common, safe defaults
             - name: NODE_ENV
