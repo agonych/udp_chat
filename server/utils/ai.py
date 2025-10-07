@@ -11,6 +11,39 @@ Last Updated: 15/05/2025
 from openai import OpenAI, AzureOpenAI
 import ollama
 import os
+import re
+
+def clean_ai_response(response, user):
+    """
+    Clean AI response by removing user name prefixes and other artifacts.
+    :param response: Raw AI response text
+    :param user: Name of the user the AI is responding as
+    :return: Cleaned response text
+    """
+    if not response:
+        return response
+    
+    # Remove user name prefix patterns like "peter:", "peter: ", "peter -", etc.
+    patterns = [
+        rf"^{re.escape(user)}:\s*",  # "peter: "
+        rf"^{re.escape(user)}\s*:\s*",  # "peter : "
+        rf"^{re.escape(user)}-\s*",  # "peter- "
+        rf"^{re.escape(user)}\s*-\s*",  # "peter - "
+        rf"^{re.escape(user)}\s+",  # "peter " (just name with space)
+    ]
+    
+    cleaned = response
+    for pattern in patterns:
+        cleaned = re.sub(pattern, "", cleaned, flags=re.IGNORECASE)
+    
+    # Remove any leading/trailing whitespace
+    cleaned = cleaned.strip()
+    
+    # If the response is empty after cleaning, return the original
+    if not cleaned:
+        return response
+    
+    return cleaned
 
 def build_chat_prompt(messages, user, content):
     """
@@ -99,7 +132,8 @@ def gtp_get_ai_response(messages, user, content, model="gpt-4o-mini"):
             frequency_penalty=0.3,  # Stronger penalty to avoid repetition
             presence_penalty=0.2    # Encourage new topics and details
         )
-        return response.choices[0].message.content.strip().strip("\"'").strip()
+        raw_response = response.choices[0].message.content.strip().strip("\"'").strip()
+        return clean_ai_response(raw_response, user)
     except Exception as e:
         print("AI generation failed:", e)
         return None
@@ -117,7 +151,8 @@ def ollama_get_ai_response(messages, user, content, model="mistral"):
     prompt = build_chat_prompt(messages, user, content)
     try:
         response = ollama.chat(model=model, messages=prompt)
-        return response['message']['content'].strip().strip("\"'").strip()
+        raw_response = response['message']['content'].strip().strip("\"'").strip()
+        return clean_ai_response(raw_response, user)
     except Exception as e:
         print("AI generation failed:", e)
         return None
