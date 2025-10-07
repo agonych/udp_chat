@@ -102,19 +102,25 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
       
+      - name: Install Snyk CLI
+        run: |
+          curl -Lo snyk https://github.com/snyk/cli/releases/latest/download/snyk-linux
+          chmod +x snyk
+          sudo mv snyk /usr/local/bin/
+      
       - name: Run Snyk to check Python dependencies
-        uses: snyk/actions/python@master
+        working-directory: ./server
         continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          args: --file=server/requirements.txt --severity-threshold=high
+        run: |
+          snyk test --file=requirements.txt --severity-threshold=high --sarif-file-output=snyk.sarif || true
       
       - name: Upload Snyk results to GitHub Code Scanning
         uses: github/codeql-action/upload-sarif@v3
-        if: always() && hashFiles('snyk.sarif') != ''
+        if: always() && hashFiles('server/snyk.sarif') != ''
         with:
-          sarif_file: snyk.sarif
+          sarif_file: server/snyk.sarif
           category: snyk-python
 
   # Job 3: Build Docker images
@@ -241,3 +247,54 @@ jobs:
         with:
           sarif_file: scout-${{ matrix.service }}.sarif
           category: docker-scout-${{ matrix.service }}
+
+  # Job 5: Push to Azure Container Registry
+  push-to-acr:
+    name: Push to ACR
+    runs-on: ubuntu-latest
+    needs: [unit-tests, snyk-scan, build-images]
+    permissions:
+      id-token: write
+      contents: read
+    
+    strategy:
+      matrix:
+        service: [server, connector, client]
+      fail-fast: false
+    
+    steps:
+      - name: Download ${{ matrix.service }} image
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.service }}-image
+      
+      - name: Load Docker image
+        run: |
+          docker load -i ${{ matrix.service }}-image.tar
+      
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      
+      - name: Login to Azure Container Registry
+        run: |
+          az acr login --name udpchatnewacr
+      
+      - name: Tag and push images
+        env:
+          ACR_LOGIN_SERVER: udpchatnewacr.azurecr.io
+          SERVICE: ${{ matrix.service }}
+          SHA_TAG: ${{ github.sha }}
+        run: |
+          # Tag with SHA
+          docker tag $SERVICE:$SHA_TAG $ACR_LOGIN_SERVER/$SERVICE:$SHA_TAG
+          docker tag $SERVICE:$SHA_TAG $ACR_LOGIN_SERVER/$SERVICE:testing-latest
+          
+          # Push both tags
+          docker push $ACR_LOGIN_SERVER/$SERVICE:$SHA_TAG
+          docker push $ACR_LOGIN_SERVER/$SERVICE:testing-latest
+          
+          echo "✅ Pushed $SERVICE:$SHA_TAG and $SERVICE:testing-latest to ACR"
