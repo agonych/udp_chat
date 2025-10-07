@@ -44,21 +44,37 @@ Builds and pushes Docker images to Azure Container Registry.
 
 **Windows (PowerShell):**
 ```powershell
-.\deploy\scripts\build-and-push.ps1 [-Help]
+.\deploy\scripts\build-and-push.ps1 [-Tag <tag>] [-Service <service>] [-Help]
 ```
 
 **Linux (Bash):**
 ```bash
-./deploy/scripts/build-and-push.sh [-h]
+./deploy/scripts/build-and-push.sh [-t|--tag <tag>] [-s|--service <service>] [-h]
 ```
 
 **Options:**
+- `-Tag <tag>` / `-t <tag>` - Docker image tag (default: latest)
+- `-Service <service>` / `-s <service>` - Service to build (default: all)
 - `-Help` / `-h` - Show help message
 
-**Images built:**
+**Services:**
 - `server` - UDP chat server
-- `connector` - WebSocket connector
+- `connector` - WebSocket connector  
 - `client` - Frontend application
+- `all` - All services (default)
+
+**Examples:**
+```bash
+# Build all services with latest tag
+./build-and-push.sh
+
+# Build only server with v1.2.3 tag
+./build-and-push.sh -t v1.2.3 -s server
+
+# Build only client and connector
+./build-and-push.sh -s client
+./build-and-push.sh -s connector
+```
 
 Notes:
 - The previous `setup-ingress` and `get-ssl` scripts are no longer required; ingress-nginx and cert-manager are provisioned by Terraform.
@@ -255,6 +271,10 @@ Notes:
 # Deploy new version to inactive environment
 ./build-and-push.sh
 ./deploy.sh -e inactive -t v1.2.3 -w
+
+# Quick development workflow - only rebuild server
+./build-and-push.sh -s server
+./deploy.sh -e testing -w
 
 # Switch to new version in production
 ./deploy.sh -e active -t v1.2.3 -w

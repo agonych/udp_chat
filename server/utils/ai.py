@@ -24,17 +24,17 @@ def build_chat_prompt(messages, user, content):
         {
             "role": "system",
             "content":
-                f"You are '{user}' in a group chat. You are an intelligent, thoughtful person who: "
-                f"- Reads the conversation context carefully and responds appropriately\n"
-                f"- Uses natural, conversational language that fits the group dynamic\n"
-                f"- Shows personality and engagement with the topic\n"
-                f"- Asks relevant questions or adds valuable insights when appropriate\n"
-                f"- Maintains a friendly, casual tone but can be serious when needed\n"
-                f"- Responds concisely but meaningfully (1-2 sentences typically)\n"
-                f"- Never mentions that you're an AI or reference your role\n"
-                f"- Adapts your communication style to match the conversation flow\n"
-                f"- Shows genuine interest in what others are saying\n"
-                f"- Can be humorous, supportive, or analytical as the situation calls for"
+                f"You are '{user}' in a group chat. You are knowledgeable, helpful, and engaging. Your responses should: "
+                f"- Provide substantive, useful information when asked questions\n"
+                f"- Be specific and detailed rather than generic\n"
+                f"- Show genuine expertise and willingness to help\n"
+                f"- Use examples and practical details when explaining concepts\n"
+                f"- Ask follow-up questions that show you're thinking deeper about the topic\n"
+                f"- Be conversational but informative - like talking to a knowledgeable friend\n"
+                f"- Avoid repetitive phrases or generic responses\n"
+                f"- Match the user's level of interest and technical depth\n"
+                f"- Be encouraging and supportive while being genuinely helpful\n"
+                f"- Don't just acknowledge questions - actually answer them with useful content"
         }
     ]
     for m in messages:
@@ -55,9 +55,10 @@ def build_chat_prompt(messages, user, content):
             "role": "user",
             "content": (
                 f"Based on the conversation above, what would {user} naturally say next? "
-                f"Consider the context, tone, and flow of the discussion. "
-                f"Respond as {user} would - naturally, engagingly, and appropriately. "
-                f"Keep it conversational and authentic to the group dynamic."
+                f"Be helpful, informative, and engaging. If someone asked a question, provide a detailed, "
+                f"useful answer. If they're learning something, give them practical information and examples. "
+                f"Show your knowledge and be genuinely helpful rather than just acknowledging their question. "
+                f"Respond as {user} would - like a knowledgeable friend who wants to help."
             )
         })
     return prompt
@@ -92,11 +93,11 @@ def gtp_get_ai_response(messages, user, content, model="gpt-4o-mini"):
         response = client.chat.completions.create(
             model=model_name, 
             messages=prompt,
-            temperature=0.8,  # More creative and natural responses
-            max_tokens=150,   # Reasonable length for chat messages
-            top_p=0.9,        # Good balance of creativity and coherence
-            frequency_penalty=0.1,  # Slight penalty to avoid repetition
-            presence_penalty=0.1    # Slight penalty to encourage new topics
+            temperature=0.9,  # More creative and varied responses
+            max_tokens=300,   # Allow longer, more detailed responses
+            top_p=0.95,       # More creative word choices
+            frequency_penalty=0.3,  # Stronger penalty to avoid repetition
+            presence_penalty=0.2    # Encourage new topics and details
         )
         return response.choices[0].message.content.strip().strip("\"'").strip()
     except Exception as e:
