@@ -1,12 +1,11 @@
-{{- if and (include "udpchat.isTesting" . | ne "true") (eq (include "udpchat.currentColour" .) "green") }}
-{{- $nginx := printf "%s-green" "nginx" -}}
+{{- if and (include "udpchat.isTesting" . | ne "true") .Values.monitoring.prometheus.enabled }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ include "udpchat.fullname" . }}-green
+  name: {{ include "udpchat.fullname" . }}-prometheus
   labels:
     {{- include "udpchat.labels" . | nindent 4 }}
-    app.kubernetes.io/color: "green"
+    app.kubernetes.io/component: prometheus
   annotations:
     kubernetes.io/ingress.class: nginx
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
@@ -16,17 +15,16 @@ metadata:
 spec:
   ingressClassName: nginx
   tls:
-    - hosts: [ {{ include "udpchat.host.green" . | quote }} ]
+    - hosts: [ prometheus.{{ include "udpchat.host.root" . }} ]
       secretName: {{ include "udpchat.tlsSecretName" . }}
   rules:
-    - host: {{ include "udpchat.host.green" . }}
+    - host: prometheus.{{ include "udpchat.host.root" . }}
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: {{ $nginx }}
-                port: { number: 80 }
-          # All paths go to client NGINX; client proxies /ws, /grafana/, /prom/
+                name: {{ include "udpchat.name.prometheus" . }}
+                port: { number: 9090 }
 {{- end }}

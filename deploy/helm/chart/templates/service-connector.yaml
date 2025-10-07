@@ -23,4 +23,8 @@ spec:
       port: {{ default 8001 .Values.connector.port }}
       targetPort: {{ default 8001 .Values.connector.port }}
       protocol: TCP
+    - name: metrics
+      port: 3000
+      targetPort: 3000
+      protocol: TCP
 {{- end }}

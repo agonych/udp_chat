@@ -28,10 +28,13 @@ def start(ip=None, port=None):
     :param port: The port to bind the server to
     :return: None
     """
+    print("main.py start() function called")
     # Import the UDPChatServer class
     from server import UDPChatServer
+    print("UDPChatServer imported successfully")
     # Create an instance of the UDPChatServer
     server = UDPChatServer()
+    print("UDPChatServer instance created")
     # Bind the server stop method to the SIGTERM and SIGINT signals
     signal.signal(signal.SIGTERM, server.stop)
     signal.signal(signal.SIGINT, server.stop)
@@ -49,8 +52,10 @@ def init_db():
 
 # Main entry point
 if __name__ == '__main__':
+    print(f"main.py executed with args: {sys.argv}")
     if len(sys.argv) > 1:
         command = sys.argv[1] # Get the command from the command line arguments
+        print(f"Command: {command}")
 
         if command == 'init_db': # Initialize the database
             print("Initializing database...")

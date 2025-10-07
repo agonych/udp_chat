@@ -23,4 +23,8 @@ spec:
       port: {{ default 9999 .Values.udp.port }}
       targetPort: {{ default 9999 .Values.udp.port }}
       protocol: UDP
+    - name: metrics
+      port: 8000
+      targetPort: 8000
+      protocol: TCP
 {{- end }}

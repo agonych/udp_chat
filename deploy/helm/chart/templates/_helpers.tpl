@@ -137,6 +137,14 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- include "udpchat.colouredName" (dict "root" . "base" "udp-server") -}}
 {{- end -}}
 
+{{- define "udpchat.name.grafana" -}}
+{{- include "udpchat.colouredName" (dict "root" . "base" "grafana") -}}
+{{- end -}}
+
+{{- define "udpchat.name.prometheus" -}}
+{{- include "udpchat.colouredName" (dict "root" . "base" "prometheus-server") -}}
+{{- end -}}
+
 
 {{/* =========================================
    Image helpers
