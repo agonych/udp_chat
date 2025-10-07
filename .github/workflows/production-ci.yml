@@ -3,7 +3,7 @@ name: Production CI
 on:
   push:
     branches:
-      - production
+      - main
   workflow_dispatch:
 
 jobs:
