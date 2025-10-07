@@ -32,6 +32,10 @@ deploy/     → Terraform + Helm + scripts for AKS deploys
 - [Client (React)](client/README.md)
 - [Terraform](deploy/terraform/README.md)
 - [Deploy Scripts](deploy/scripts/README.md)
+- [GitHub Actions](.github/workflows/README.md)
+- [Helm Charts](deploy/helm/chart/README.md)
+- [Dockerfiles](deploy/docker/README.md)
+- [Kubernetes Manifests](deploy/k8s/README.md)
 
 ---
 
