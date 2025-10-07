@@ -24,10 +24,17 @@ def build_chat_prompt(messages, user, content):
         {
             "role": "system",
             "content":
-                "You are participating in a group chat. Your goal is to respond "
-                 f"as if you are '{user}', using a casual, human-like, "
-                 f"friendly tone. "
-
+                f"You are '{user}' in a group chat. You are an intelligent, thoughtful person who: "
+                f"- Reads the conversation context carefully and responds appropriately\n"
+                f"- Uses natural, conversational language that fits the group dynamic\n"
+                f"- Shows personality and engagement with the topic\n"
+                f"- Asks relevant questions or adds valuable insights when appropriate\n"
+                f"- Maintains a friendly, casual tone but can be serious when needed\n"
+                f"- Responds concisely but meaningfully (1-2 sentences typically)\n"
+                f"- Never mentions that you're an AI or reference your role\n"
+                f"- Adapts your communication style to match the conversation flow\n"
+                f"- Shows genuine interest in what others are saying\n"
+                f"- Can be humorous, supportive, or analytical as the situation calls for"
         }
     ]
     for m in messages:
@@ -47,23 +54,21 @@ def build_chat_prompt(messages, user, content):
         prompt.append({
             "role": "user",
             "content": (
-                f"Continue the chat as if you are {user}. "
-                "Craft the next message that fits naturally into the "
-                "conversation, something user would like to say next. Do not "
-                "mention the name of the user you are pretending to be in "
-                "your response. Do not use long paragraphs, lists, or formal "
-                "language. Do not introduce yourself or sign messages. Do not put your answer in quotes or brackets."
+                f"Based on the conversation above, what would {user} naturally say next? "
+                f"Consider the context, tone, and flow of the discussion. "
+                f"Respond as {user} would - naturally, engagingly, and appropriately. "
+                f"Keep it conversational and authentic to the group dynamic."
             )
         })
     return prompt
 
-def gtp_get_ai_response(messages, user, content, model="gpt-3.5-turbo"):
+def gtp_get_ai_response(messages, user, content, model="gpt-4o-mini"):
     """
-    Get a chat response from OpenAI's GPT-3.5 Turbo model.
+    Get a chat response from OpenAI's GPT-4o-mini model.
     :param messages: List of messages in the chat.
     :param user: Name of the user to reply as.
     :param content: Content to improve (optional).
-    :param model: The OpenAI model to use (default is "gpt-3.5-turbo").
+    :param model: The OpenAI model to use (default is "gpt-4o-mini").
     :return: AI generated response.
     """
     prompt = build_chat_prompt(messages, user, content)
@@ -84,7 +89,15 @@ def gtp_get_ai_response(messages, user, content, model="gpt-3.5-turbo"):
             client = OpenAI(api_key=api_key)
             model_name = model
 
-        response = client.chat.completions.create(model=model_name, messages=prompt)
+        response = client.chat.completions.create(
+            model=model_name, 
+            messages=prompt,
+            temperature=0.8,  # More creative and natural responses
+            max_tokens=150,   # Reasonable length for chat messages
+            top_p=0.9,        # Good balance of creativity and coherence
+            frequency_penalty=0.1,  # Slight penalty to avoid repetition
+            presence_penalty=0.1    # Slight penalty to encourage new topics
+        )
         return response.choices[0].message.content.strip().strip("\"'").strip()
     except Exception as e:
         print("AI generation failed:", e)
