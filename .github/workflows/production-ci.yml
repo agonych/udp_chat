@@ -165,12 +165,6 @@ jobs:
         run: |
           kubectl create namespace udpchat-prod --dry-run=client -o yaml | kubectl apply -f -
       
-      - name: Clean up old monitoring ingresses
-        run: |
-          # Delete any existing monitoring ingresses to avoid conflicts
-          kubectl delete ingress -n udpchat-prod -l app.kubernetes.io/component=grafana --ignore-not-found=true
-          kubectl delete ingress -n udpchat-prod -l app.kubernetes.io/component=prometheus --ignore-not-found=true
-      
       - name: Determine inactive color
         id: color
         run: |
@@ -222,21 +216,6 @@ jobs:
             --set images.client=$ACR_LOGIN_SERVER/client:$TAG \
             --wait \
             --timeout 10m
-      
-      - name: Update www and monitoring ingresses
-        working-directory: ./deploy/helm/chart
-        run: |
-          # Get current active color again
-          ACTIVE=$(kubectl -n udpchat-prod get ingress udpchat-www-www -o jsonpath='{.metadata.labels.app\.kubernetes\.io/color}' 2>/dev/null || echo "green")
-          
-          # Deploy www target to update ingresses for the active color
-          helm upgrade --install udpchat-www . \
-            --namespace udpchat-prod \
-            -f values.prod.yaml \
-            --set deployTarget=www \
-            --set activeColor=$ACTIVE \
-            --wait \
-            --timeout 5m
       
       - name: Deployment status
         if: always()
