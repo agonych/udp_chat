@@ -333,12 +333,21 @@ jobs:
         run: |
           kubectl create namespace udpchat-testing --dry-run=client -o yaml | kubectl apply -f -
       
-      - name: Apply secrets
-        working-directory: ./deploy/helm/chart
+      - name: Create secrets
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD_TESTING }}
         run: |
-          if [ -f secret.testing.yaml ]; then
-            kubectl -n udpchat-testing apply -f secret.testing.yaml || true
-          fi
+          kubectl create secret generic udpchat-secrets \
+            --namespace udpchat-testing \
+            --from-literal=DB_HOST="postgres" \
+            --from-literal=DB_PORT="5432" \
+            --from-literal=DB_NAME="udpchat" \
+            --from-literal=DB_USER="udpchat" \
+            --from-literal=DB_PASSWORD="" \
+            --from-literal=OPENAI_API_KEY="${OPENAI_API_KEY}" \
+            --from-literal=POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" \
+            --dry-run=client -o yaml | kubectl apply -f -
       
       - name: Deploy with Helm
         working-directory: ./deploy/helm/chart
