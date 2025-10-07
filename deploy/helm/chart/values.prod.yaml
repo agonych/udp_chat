@@ -2,12 +2,19 @@
 testServer:
   enabled: false
 
+# Enable monitoring for production
+monitoring:
+  enabled: true
+  grafana:
+    enabled: true
+  prometheus:
+    enabled: true
+
 nginx:
   replicas: 2
   runtimeConfig:
     enabled: true
   env:
-    WS_URL: "wss://{{ .Values.ingress.host }}/ws"  # Use HTTPS WebSocket in production
     APP_VERSION: "{{ .Chart.Version }}"
     NODE_ENV: "production"
   resources: {}

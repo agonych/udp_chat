@@ -58,8 +58,6 @@ spec:
               apk add --no-cache gettext >/dev/null;
               envsubst < /tmpl/config.json.tmpl > /work/config.json;
           env:
-            - name: WS_URL
-              value: {{ default "" (get (default dict .Values.nginx.env) "WS_URL") | quote }}
             - name: APP_VERSION
               value: {{ default "" (get (default dict .Values.nginx.env) "APP_VERSION") | quote }}
             - name: NODE_ENV
@@ -113,7 +111,7 @@ spec:
             - name: runtime-out
               mountPath: /etc/nginx/runtime                       # contains config.json
             - name: runtime-conf
-              mountPath: /etc/nginx/conf.d/default.conf           # nginx server definition
+              mountPath: /etc/nginx/nginx.conf                    # nginx main configuration
               subPath: default.conf
             {{- end }}
 

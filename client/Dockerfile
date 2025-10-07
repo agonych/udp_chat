@@ -13,12 +13,6 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Accept build arguments for environment variables
-ARG VITE_WS_URL
-
-# Set environment variables for build
-ENV VITE_WS_URL=$VITE_WS_URL
-
 # Build the application
 RUN npm run build
 

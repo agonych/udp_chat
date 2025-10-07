@@ -1,0 +1,38 @@
+{{- if and (include "udpchat.isTesting" . | ne "true") .Values.monitoring.prometheus.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "udpchat.fullname" . }}-prometheus-config
+  labels:
+    {{- include "udpchat.labels" . | nindent 4 }}
+    app.kubernetes.io/component: prometheus
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+
+    rule_files:
+      # - "first_rules.yml"
+      # - "second_rules.yml"
+
+    scrape_configs:
+      # Prometheus itself
+      - job_name: 'prometheus'
+        static_configs:
+          - targets: ['localhost:9090']
+
+      # UDP Chat Server
+      - job_name: 'udpchat-server'
+        static_configs:
+          - targets: ['{{ include "udpchat.name.udp" . }}:{{ default 8080 .Values.udp.httpStatus.port }}']
+        scrape_interval: 5s
+        metrics_path: '/metrics'
+
+      # UDP Chat Connector
+      - job_name: 'udpchat-connector'
+        static_configs:
+          - targets: ['{{ include "udpchat.name.connector" . }}:{{ default 8001 .Values.connector.port }}']
+        scrape_interval: 5s
+        metrics_path: '/metrics'
+{{- end }}

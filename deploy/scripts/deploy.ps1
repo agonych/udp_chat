@@ -89,10 +89,6 @@ function Invoke-HelmDeploy {
     $args += @('--set', "images.server=$AcrLoginServer/server:$Tag")
     $args += @('--set', "images.connector=$AcrLoginServer/connector:$Tag")
     $args += @('--set', "images.client=$AcrLoginServer/client:$Tag")
-    if ($Target -eq 'testing') {
-      $args += @('--set', "testServer.image.repository=$AcrLoginServer/test-server")
-      $args += @('--set', "testServer.image.tag=$Tag")
-    }
   }
 
   # Set domain from Terraform DNS zone if available

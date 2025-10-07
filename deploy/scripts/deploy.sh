@@ -138,11 +138,6 @@ helm_deploy() {
         helm_args+=("--set" "images.server=$ACR_LOGIN_SERVER/server:$TAG")
         helm_args+=("--set" "images.connector=$ACR_LOGIN_SERVER/connector:$TAG")
         helm_args+=("--set" "images.client=$ACR_LOGIN_SERVER/client:$TAG")
-        # Testing-only test-server image override
-        if [[ "$target" == "testing" ]]; then
-            helm_args+=("--set" "testServer.image.repository=$ACR_LOGIN_SERVER/test-server")
-            helm_args+=("--set" "testServer.image.tag=$TAG")
-        fi
     fi
 
     # Set domain from Terraform DNS zone, if available

@@ -1,28 +1,10 @@
 # Testing env overrides
 deployTarget: "testing"
 
-# Enable test-server in testing environment
-testServer:
-  enabled: false
-  replicas: 1
-  image:
-    repository: udpchatnewacr.azurecr.io/test-server
-    tag: latest
-    pullPolicy: IfNotPresent
-  resources: {}
-
-testing:
-  enableDb: true
-  tlsEnabled: true
-  db:
-    # Use DB_PASSWORD key from udpchat-app secret for Postgres password
-    passwordKey: DB_PASSWORD
-
 # Use fewer replicas by default in testing
 nginx:
   replicas: 1
   env:
-    WS_URL: "ws://connector:8001/ws"  # WebSocket URL for testing
     APP_VERSION: "testing"
     NODE_ENV: "testing"
 
@@ -44,6 +26,12 @@ udp:
 existingAppSecret:
   enabled: true
   name: udpchat-app
+
+# Postgres config: read password from udpchat-app key DB_PASSWORD
+testing:
+  tlsEnabled: true
+  db:
+    passwordKey: DB_PASSWORD
 
 # Certificate defaults for testing (HTTP-01 via ClusterIssuer)
 certificate:

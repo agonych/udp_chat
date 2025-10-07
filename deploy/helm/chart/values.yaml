@@ -45,6 +45,14 @@ affinity: {}
 
 revisionHistoryLimit: 3
 
+# Monitoring (prod only)
+monitoring:
+  enabled: false
+  grafana:
+    enabled: false
+  prometheus:
+    enabled: false
+
 # Subdomains per environment
 testing:
   subdomain: "testing"
@@ -99,7 +107,6 @@ nginx:
 
   # Environment passed to nginx (also used by the initContainer for envsubst)
   env:
-    WS_URL: ""              # left empty -> same-origin '/ws'
     APP_VERSION: "testing"
     NODE_ENV: "testing"
 

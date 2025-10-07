@@ -10,6 +10,7 @@
 client/     → Frontend React app (chat interface)
 connector/  → Node.js bridge (WebSocket ↔ UDP)
 server/     → Python backend (UDP server + AI logic)
+deploy/     → Terraform + Helm + scripts for AKS deploys
 ```
 
 ---
@@ -29,6 +30,8 @@ server/     → Python backend (UDP server + AI logic)
 - [Client (React)](client/README.md)
 - [Connector (Node.js)](connector/README.md)
 - [Server (Python)](server/README.md)
+- [Deploy (Terraform/Helm/Scripts)](deploy/terraform/README.md)
+- [Scripts (infra-up/down, deploy, blue/green)](deploy/scripts/README.md)
 
 ---
 
