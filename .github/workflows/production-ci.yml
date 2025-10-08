@@ -188,7 +188,7 @@ jobs:
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
           GRAFANA_ADMIN_PASSWORD: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
         run: |
-          kubectl create secret generic udpchat-secrets \
+          kubectl create secret generic udpchat-app \
             --namespace udpchat-prod \
             --from-literal=DB_HOST="postgres" \
             --from-literal=DB_PORT="5432" \

@@ -2,6 +2,15 @@
 testServer:
   enabled: false
 
+# Enable certificate creation for production wildcard cert
+certificate:
+  create: true
+  name: "wildcard-udpchat"
+  secretName: "wildcard-udpchat-tls"
+  issuer:
+    kind: "ClusterIssuer"
+    name: "letsencrypt-prod"
+
 # Enable monitoring for production
 monitoring:
   enabled: true

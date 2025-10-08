@@ -338,7 +338,7 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD_TESTING }}
         run: |
-          kubectl create secret generic udpchat-secrets \
+          kubectl create secret generic udpchat-app \
             --namespace udpchat-testing \
             --from-literal=DB_HOST="postgres" \
             --from-literal=DB_PORT="5432" \

@@ -1,7 +1,7 @@
 {{- if and (include "udpchat.isTesting" . | ne "true") .Values.monitoring.prometheus.enabled }}
 {{- $active := include "udpchat.activeColour" . -}}
 {{- $deployTarget := default "" .Values.deployTarget | lower -}}
-{{- if or (eq $deployTarget "www") (eq $deployTarget $active) }}
+{{- if eq $deployTarget $active }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:

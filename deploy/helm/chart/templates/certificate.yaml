@@ -20,7 +20,8 @@ spec:
     - {{ include "udpchat.host.testing" . | quote }}
   {{- end }}
 {{- else -}}
-  {{- if .Values.certificate.create }}
+  {{- $deployTarget := default "" .Values.deployTarget | lower -}}
+  {{- if and .Values.certificate.create (or (eq $deployTarget "blue") (eq $deployTarget "green")) }}
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
