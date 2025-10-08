@@ -21,12 +21,14 @@ spec:
   {{- end }}
 {{- else -}}
   {{- $deployTarget := default "" .Values.deployTarget | lower -}}
-  {{- if and .Values.certificate.create (or (eq $deployTarget "blue") (eq $deployTarget "green")) }}
+  {{- if and .Values.certificate.create (eq $deployTarget "www") }}
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: {{ default "wildcard-udpchat" .Values.certificate.name }}
   namespace: {{ .Release.Namespace }}
+  annotations:
+    helm.sh/resource-policy: keep
 spec:
   secretName: {{ include "udpchat.tlsSecretName" . }}
   issuerRef:
