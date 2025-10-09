@@ -25,11 +25,11 @@ $ChartDir  = Resolve-Path (Join-Path $RepoRoot 'deploy\helm\chart')
 $Ns = 'udpchat-prod'
 $Release = 'udpchat-www'
 
-# Detect current active colour from the existing www ingress label, if present
+# Detect current active colour from configmap-active
 $current = ''
 try {
-  $lbl = kubectl -n $Ns get ingress ${Release}-www -o jsonpath='{.metadata.labels.app\.kubernetes\.io/color}' 2>$null
-  if ($lbl) { $current = $lbl.Trim() }
+  $current = kubectl -n $Ns get configmap ${Release}-active -o jsonpath='{.data.active}' 2>$null
+  if ($current) { $current = $current.Trim() }
 } catch {}
 
 if (-not $current) { $current = 'green' }

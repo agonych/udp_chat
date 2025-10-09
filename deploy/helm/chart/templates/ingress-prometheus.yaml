@@ -1,4 +1,7 @@
 {{- if and (include "udpchat.isTesting" . | ne "true") .Values.monitoring.prometheus.enabled }}
+{{- $active := include "udpchat.activeColour" . -}}
+{{- $deployTarget := default "" .Values.deployTarget | lower -}}
+{{- if eq $deployTarget $active }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -6,6 +9,7 @@ metadata:
   labels:
     {{- include "udpchat.labels" . | nindent 4 }}
     app.kubernetes.io/component: prometheus
+    app.kubernetes.io/color: {{ $active | quote }}
   annotations:
     kubernetes.io/ingress.class: nginx
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
@@ -27,4 +31,5 @@ spec:
               service:
                 name: {{ include "udpchat.name.prometheus" . }}
                 port: { number: 9090 }
+{{- end }}
 {{- end }}

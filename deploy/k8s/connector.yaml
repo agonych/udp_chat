@@ -16,7 +16,7 @@ spec:
       containers:
       - name: connector
         image: connector:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         ports:
         - containerPort: 8001
           name: ws

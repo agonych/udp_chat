@@ -99,7 +99,7 @@ images:
 nginx:
   replicas: 1
   port: 80
-  imagePullPolicy: Always
+  imagePullPolicy: IfNotPresent
 
   # Runtime config: render /api/config via envsubst at startup
   runtimeConfig:

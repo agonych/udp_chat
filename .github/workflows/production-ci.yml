@@ -3,7 +3,7 @@ name: Production CI
 on:
   push:
     branches:
-      - production
+      - main
   workflow_dispatch:
 
 jobs:
@@ -185,18 +185,17 @@ jobs:
       - name: Create secrets
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          DB_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
           GRAFANA_ADMIN_PASSWORD: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
         run: |
-          kubectl create secret generic udpchat-secrets \
+          kubectl create secret generic udpchat-app \
             --namespace udpchat-prod \
-            --from-literal=DB_HOST="postgres" \
+            --from-literal=DB_HOST="udpchatnewpg.postgres.database.azure.com" \
             --from-literal=DB_PORT="5432" \
             --from-literal=DB_NAME="udpchat" \
-            --from-literal=DB_USER="udpchat" \
-            --from-literal=DB_PASSWORD="" \
+            --from-literal=DB_USER="pgadmin" \
+            --from-literal=DB_PASSWORD="${DB_PASSWORD}" \
             --from-literal=OPENAI_API_KEY="${OPENAI_API_KEY}" \
-            --from-literal=POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" \
             --from-literal=GRAFANA_ADMIN_PASSWORD="${GRAFANA_ADMIN_PASSWORD}" \
             --dry-run=client -o yaml | kubectl apply -f -
       
@@ -211,6 +210,7 @@ jobs:
             --namespace udpchat-prod \
             -f values.prod.yaml \
             --set deployTarget=$COLOR \
+            --set existingAppSecret.enabled=true \
             --set images.server=$ACR_LOGIN_SERVER/server:$TAG \
             --set images.connector=$ACR_LOGIN_SERVER/connector:$TAG \
             --set images.client=$ACR_LOGIN_SERVER/client:$TAG \
@@ -236,7 +236,12 @@ jobs:
           kubectl get svc -n udpchat-prod -l app.kubernetes.io/color=$COLOR >> $GITHUB_STEP_SUMMARY 2>&1 || true
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Monitoring (points to active color)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Grafana**: https://grafana.chat.kudriavcev.info" >> $GITHUB_STEP_SUMMARY
+          echo "- **Prometheus**: https://prometheus.chat.kudriavcev.info" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
-          echo "- Test the $COLOR environment" >> $GITHUB_STEP_SUMMARY
-          echo "- Use \`./deploy/scripts/set-active.sh $COLOR\` to switch traffic" >> $GITHUB_STEP_SUMMARY
+          echo "- Test the **$COLOR** environment at: https://$COLOR.chat.kudriavcev.info" >> $GITHUB_STEP_SUMMARY
+          echo "- When ready, switch traffic: \`./deploy/scripts/set-active.sh $COLOR\`" >> $GITHUB_STEP_SUMMARY
+          echo "- After switch, monitoring will point to $COLOR" >> $GITHUB_STEP_SUMMARY
 

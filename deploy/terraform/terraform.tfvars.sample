@@ -1,0 +1,7 @@
+subscription_id   = ""
+tenant_id         = ""
+client_id         = ""
+client_secret     = ""
+pg_admin_password = ""
+project_dns_zone  = ""
+acme_email        = ""

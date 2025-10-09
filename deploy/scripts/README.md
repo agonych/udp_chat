@@ -81,7 +81,38 @@ Notes:
 - AKS Standard LB is pre-configured (externalTrafficPolicy=Local). No manual NSG steps needed.
 - Deploy scripts auto-apply environment secrets if present: `secret.testing.yaml` for testing, `secret.yaml` for prod.
 
-### 4. Deploy Script (`deploy.ps1` / `deploy.sh`)
+### 4. AKS Login Script (`aks-login.ps1` / `aks-login.sh`) ⭐ NEW
+Authenticates kubectl to the AKS cluster using credentials from Terraform outputs.
+
+**Windows (PowerShell):**
+```powershell
+.\deploy\scripts\aks-login.ps1
+```
+
+**Linux (Bash):**
+```bash
+./deploy/scripts/aks-login.sh
+```
+
+**What it does:**
+- Reads AKS cluster name and resource group from Terraform outputs
+- Runs `az aks get-credentials` to configure kubectl
+- Tests the connection to verify authentication
+- Shows cluster nodes and current context
+
+**Prerequisites:**
+- Run `az login` first
+- Infrastructure must be deployed (`infra-up.ps1`)
+
+**When to use:**
+- First time after running `infra-up.ps1`
+- After switching Azure subscriptions
+- If kubectl connection is lost
+- Fresh terminal session
+
+**Note:** You only need to run this once per session. Kubectl credentials persist.
+
+### 5. Deploy Script (`deploy.ps1` / `deploy.sh`)
 Deploys the UDP Chat application to different environments.
 
 **Windows (PowerShell):**
@@ -110,7 +141,7 @@ Deploys the UDP Chat application to different environments.
 - `-Wait` / `-w` - Wait for deployment to complete
 - `-Help` / `-h` - Show help message
 
-### 5. Remove Script (`remove.ps1` / `remove.sh`)
+### 6. Remove Script (`remove.ps1` / `remove.sh`)
 Removes deployments from different environments.
 
 **Windows (PowerShell):**
@@ -137,9 +168,9 @@ Removes deployments from different environments.
 - `-Help` / `-h` - Show help message
 
 Behavior details:
-- For prod, `active`/`inactive` are resolved dynamically from the `udpchat-www` ingress color label; `active` removal prompts for confirmation.
+- For prod, `active`/`inactive` are resolved dynamically from the `udpchat-www-active` ConfigMap; `active` removal prompts for confirmation.
 
-### 6. Set Active (`set-active.ps1` / `set-active.sh`)
+### 7. Set Active (`set-active.ps1` / `set-active.sh`)
 Switches the active colour for `www` (blue|green|toggle).
 
 **Windows (PowerShell):**
@@ -153,11 +184,12 @@ Switches the active colour for `www` (blue|green|toggle).
 ```
 
 Notes:
-- Detects current active from the `udpchat-www` ingress label; `toggle` flips it.
+- Detects current active from the `udpchat-www-active` ConfigMap; `toggle` flips it.
 - Applies `deployTarget=www` and sets `activeColor` accordingly.
+- Updates both the ConfigMap and ingress routing to the selected color.
 
-### 7. Get Active (`get-active.ps1` / `get-active.sh`)
-Prints the current active colour (blue|green|unknown) by inspecting the `udpchat-www` ingress.
+### 8. Get Active (`get-active.ps1` / `get-active.sh`)
+Prints the current active colour (blue|green) by reading the `udpchat-www-active` ConfigMap.
 
 **Windows (PowerShell):**
 ```powershell
@@ -224,7 +256,18 @@ Notes:
 .\infra-up.ps1
 ```
 
-### 2. Application Deployment (testing uses HTTPS by default)
+### 2. Authenticate to AKS Cluster
+```bash
+# Linux
+./aks-login.sh
+
+# Windows
+.\aks-login.ps1
+```
+
+**Note:** Run this once after infrastructure setup, or when kubectl connection is lost.
+
+### 3. Application Deployment (testing uses HTTPS by default)
 ```bash
 # Linux
 ./build-and-push.sh
@@ -237,7 +280,7 @@ Notes:
 .\deploy.ps1 -Environment inactive -Tag v1.2.3 -Wait
 ```
 
-### 3. Environment Management
+### 4. Environment Management
 ```bash
 # Linux
 ./deploy.sh -e active -t v1.2.3 -w    # Deploy to currently active colour
@@ -249,7 +292,7 @@ Notes:
 .\remove.ps1 -Environment inactive
 ```
 
-### 4. Cleanup
+### 5. Cleanup
 ```bash
 # Linux
 ./remove.sh -e both
@@ -263,8 +306,15 @@ Notes:
 ## Examples
 
 ```bash
-# Complete setup from scratch
+# Complete setup from scratch (Windows)
+.\infra-up.ps1
+.\aks-login.ps1           # Authenticate kubectl
+.\build-and-push.ps1
+.\deploy.ps1 -Environment testing -Wait
+
+# Complete setup from scratch (Linux)
 ./infra-up.sh
+./aks-login.sh            # Authenticate kubectl
 ./build-and-push.sh
 ./deploy.sh -e testing -w
 

@@ -34,14 +34,15 @@ resource "azurerm_dns_a_record" "green" {
   records             = [azurerm_public_ip.ingress.ip_address]
 }
 
-# CNAME record for www to point to the active colour (blue or green)
-resource "azurerm_dns_cname_record" "www" {
+# A record for www - points directly to ingress IP
+# Ingress controller routes to active color based on Kubernetes ingress rules
+resource "azurerm_dns_a_record" "www" {
   count               = var.enable_k8s ? 1 : 0
   name                = "www"
   zone_name           = data.azurerm_dns_zone.chat.name
   resource_group_name = data.azurerm_resource_group.rg.name
   ttl                 = 60
-  record              = "${var.active_colour}.${data.azurerm_dns_zone.chat.name}."
+  records             = [azurerm_public_ip.ingress.ip_address]
 }
 
 # A record for Grafana monitoring

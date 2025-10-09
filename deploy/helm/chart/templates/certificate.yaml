@@ -20,12 +20,15 @@ spec:
     - {{ include "udpchat.host.testing" . | quote }}
   {{- end }}
 {{- else -}}
-  {{- if .Values.certificate.create }}
+  {{- $deployTarget := default "" .Values.deployTarget | lower -}}
+  {{- if and .Values.certificate.create (eq $deployTarget "www") }}
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: {{ default "wildcard-udpchat" .Values.certificate.name }}
   namespace: {{ .Release.Namespace }}
+  annotations:
+    helm.sh/resource-policy: keep
 spec:
   secretName: {{ include "udpchat.tlsSecretName" . }}
   issuerRef:
