@@ -89,6 +89,9 @@ CHART_DIR="$REPO_ROOT/deploy/helm/chart"
 
 # Read Terraform outputs for ACR and DNS
 TF_DIR="$REPO_ROOT/deploy/terraform"
+ACR_LOGIN_SERVER=""
+DNS_ZONE_NAME=""
+
 if [[ -d "$TF_DIR" ]]; then
     pushd "$TF_DIR" >/dev/null
     ACR_LOGIN_SERVER=$(terraform output -raw acr_login_server 2>/dev/null || true)
@@ -206,20 +209,5 @@ echo -e "\n${CYAN}Deployment Status:${NC}"
 kubectl get pods -n "$NAMESPACE" || true
 kubectl get svc -n "$NAMESPACE" || true
 kubectl get ingress -n "$NAMESPACE" || true
-
-# Configure NSG rules for testing environment (Azure specific)
-if [[ "$ENVIRONMENT" == "testing" ]]; then
-    echo -e "\n${CYAN}Configuring NSG rules for ingress access...${NC}"
-    if [[ -f "$REPO_ROOT/deploy/terraform" ]]; then
-        cd "$REPO_ROOT/deploy/terraform"
-        NODE_RG=$(terraform output -raw aks_node_resource_group 2>/dev/null || echo "")
-        if [[ -n "$NODE_RG" ]]; then
-            echo "Found AKS node resource group: $NODE_RG"
-            # Note: NSG configuration would need Azure CLI
-            echo "Note: NSG rule configuration requires Azure CLI and appropriate permissions"
-        fi
-        cd - > /dev/null
-    fi
-fi
 
 echo -e "\n${GREEN}Deployment completed!${NC}"

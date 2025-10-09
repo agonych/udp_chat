@@ -185,18 +185,17 @@ jobs:
       - name: Create secrets
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          DB_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
           GRAFANA_ADMIN_PASSWORD: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
         run: |
           kubectl create secret generic udpchat-app \
             --namespace udpchat-prod \
-            --from-literal=DB_HOST="postgres" \
+            --from-literal=DB_HOST="udpchatnewpg.postgres.database.azure.com" \
             --from-literal=DB_PORT="5432" \
             --from-literal=DB_NAME="udpchat" \
-            --from-literal=DB_USER="udpchat" \
-            --from-literal=DB_PASSWORD="" \
+            --from-literal=DB_USER="pgadmin" \
+            --from-literal=DB_PASSWORD="${DB_PASSWORD}" \
             --from-literal=OPENAI_API_KEY="${OPENAI_API_KEY}" \
-            --from-literal=POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" \
             --from-literal=GRAFANA_ADMIN_PASSWORD="${GRAFANA_ADMIN_PASSWORD}" \
             --dry-run=client -o yaml | kubectl apply -f -
       
@@ -211,6 +210,7 @@ jobs:
             --namespace udpchat-prod \
             -f values.prod.yaml \
             --set deployTarget=$COLOR \
+            --set existingAppSecret.enabled=true \
             --set images.server=$ACR_LOGIN_SERVER/server:$TAG \
             --set images.connector=$ACR_LOGIN_SERVER/connector:$TAG \
             --set images.client=$ACR_LOGIN_SERVER/client:$TAG \

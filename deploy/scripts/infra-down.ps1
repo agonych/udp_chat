@@ -9,14 +9,12 @@ $TfDir = Join-Path $ScriptDir "..\terraform"
 Push-Location $TfDir
 
 # Two-phase destroy: first remove Kubernetes/Helm/DNS, then base Azure infra
+# Phase 1: destroy k8s/helm/dns (including ClusterIssuer) by applying with enable_k8s=false
+terraform apply -auto-approve -input=false
+# Phase 2: destroy the rest of the infra
+terraform destroy -auto-approve -input=false
 
-# Phase 1: destroy k8s/helm/dns (including ClusterIssuer)
-terraform destroy -auto-approve -input=false -var enable_k8s=true -var enable_clusterissuer=true
-
-# Phase 2: destroy base Azure infra (AKS/ACR/PG/IP)
-terraform destroy -auto-approve -input=false -var enable_k8s=false
-
-Write-Host "OK: Infra is down (k8s + base)"
+Write-Host "Infrastructure teardown complete." -ForegroundColor Green
 
 # Return to the original directory
 Pop-Location

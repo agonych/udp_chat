@@ -52,13 +52,12 @@ switch ($Environment) {
   }
   'active' { 
     $Namespace = 'udpchat-prod'
-    # Detect current active via www ingress label; default green if unknown
+    # Detect current active from configmap-active; default green if unknown
     $ActiveColor = ''
-    try { $ActiveColor = kubectl -n $Namespace get ingress udpchat-www-www -o jsonpath='{.metadata.labels.app\.kubernetes\.io/color}' 2>$null } catch {}
+    try { $ActiveColor = kubectl -n $Namespace get configmap udpchat-www-active -o jsonpath='{.data.active}' 2>$null } catch {}
     if (-not $ActiveColor) { $ActiveColor = 'green' }
     $ReleaseName = "udpchat-$ActiveColor"
-    Write-Host "WARNING: You are removing the ACTIVE environment (green)!" -ForegroundColor Red
-    Write-Host "This will take down production traffic at www.chat.kudriavcev.info" -ForegroundColor Red
+    Write-Host "WARNING: You are removing the ACTIVE environment!" -ForegroundColor Red
     $confirm = Read-Host "Are you sure you want to continue? (yes/no)"
     if ($confirm -ne "yes") {
       Write-Host "Operation cancelled." -ForegroundColor Yellow
@@ -67,9 +66,9 @@ switch ($Environment) {
   }
   'inactive' { 
     $Namespace = 'udpchat-prod'
-    # Detect current active and compute inactive
+    # Detect current active from configmap-active and compute inactive
     $ActiveColor = ''
-    try { $ActiveColor = kubectl -n $Namespace get ingress udpchat-www-www -o jsonpath='{.metadata.labels.app\.kubernetes\.io/color}' 2>$null } catch {}
+    try { $ActiveColor = kubectl -n $Namespace get configmap udpchat-www-active -o jsonpath='{.data.active}' 2>$null } catch {}
     if (-not $ActiveColor) { $ActiveColor = 'green' }
     $Inactive = if ($ActiveColor -eq 'green') { 'blue' } else { 'green' }
     $ReleaseName = "udpchat-$Inactive"

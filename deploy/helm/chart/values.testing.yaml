@@ -22,10 +22,24 @@ udp:
     DB_USER: "udpchat"
     AI_MODE: "gpt"
 
-# For testing, use pre-applied secret.testing.yaml (existing secret)
+# For testing, auto-create secret if it doesn't exist
+# If secret.testing.yaml is pre-applied, it takes precedence
 existingAppSecret:
+  enabled: false  # Let Helm create it if needed
+  name: udpchat-app
+
+# Auto-provision secret with default values for local development
+# For security, pass sensitive values via --set or create secret.testing.yaml from sample
+appSecret:
   enabled: true
   name: udpchat-app
+  data:
+    DB_HOST: "postgres"
+    DB_PORT: "5432"
+    DB_NAME: "udpchat"
+    DB_USER: "udpchat"
+    DB_PASSWORD: "" # Set via secrets
+    OPENAI_API_KEY: ""  # Set via secrets
 
 # Postgres config: read password from udpchat-app key DB_PASSWORD
 testing:

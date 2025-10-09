@@ -9,14 +9,16 @@ $ErrorActionPreference = 'Stop'
 $ns = 'udpchat-prod'
 
 try {
-  $json = kubectl -n $ns get ingress -l app.kubernetes.io/instance=udpchat-www -o json | ConvertFrom-Json
-  if (-not $json.items -or $json.items.Count -eq 0) {
-    Write-Host "unknown"; exit 0
+  # Read from configmap-active
+  $color = kubectl -n $ns get configmap udpchat-www-active -o jsonpath='{.data.active}' 2>$null
+  if ($color) {
+    Write-Host $color.Trim()
+  } else {
+    # Default to green if www not deployed yet
+    Write-Host "green"
   }
-  $color = $json.items[0].metadata.labels.'app.kubernetes.io/color'
-  if (-not $color) { Write-Host "unknown" } else { Write-Host $color }
 } catch {
-  Write-Host "unknown"
+  Write-Host "green"
 }
 
 

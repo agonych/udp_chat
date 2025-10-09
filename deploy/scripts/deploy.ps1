@@ -107,29 +107,40 @@ Write-Host ("Environment: {0}" -f $Environment)
 Write-Host ("Release: {0}" -f $ReleaseName)
 Write-Host ("Namespace: {0}" -f $Namespace)
 
-# Apply environment-specific secret if present
-try {
-  if ($Environment -eq 'testing') {
-    $st = Join-Path $ChartDir 'secret.testing.yaml'
-    if (Test-Path $st) { kubectl -n $Namespace apply -f $st | Out-Null }
-  } else {
-    $sp = Join-Path $ChartDir 'secret.yaml'
-    if (Test-Path $sp) { kubectl -n $Namespace apply -f $sp | Out-Null }
-  }
-} catch {}
+# Apply secret file if it exists
+$secretFile = if ($Environment -eq 'testing') {
+  Join-Path $ChartDir 'secret.testing.yaml'
+} else {
+  Join-Path $ChartDir 'secret.yaml'
+}
+$useExistingSecret = Test-Path $secretFile
 
-if ($Environment -eq 'testing') {
+
+if ($useExistingSecret) {
+  # Ensure namespace exists before applying secret
+  kubectl create namespace $Namespace --dry-run=client -o yaml | kubectl apply -f - | Out-Null
+  Write-Host "Found $(Split-Path -Leaf $secretFile) - applying to namespace $Namespace" -ForegroundColor Green
+  kubectl -n $Namespace apply -f $secretFile
+
+  # Override to use existing secret instead of auto-creating
+  if (-not $Set) { $Set = @() }
+  $Set += "existingAppSecret.enabled=true"
+  $Set += "appSecret.enabled=false"
+}
+
+# Deploy based on environment
+if ($Environment -eq 'testing') { # Deploy testing environment
   Invoke-HelmDeploy -Rel $ReleaseName -Ns $Namespace -Target 'testing' -ValuesFile 'values.testing.yaml'
-} elseif ($Environment -eq 'both') {
+} elseif ($Environment -eq 'both') { # Deploy both blue and green production environments
   foreach ($color in @('blue','green')) {
     $rel = "${ReleaseName}-$color"
     Invoke-HelmDeploy -Rel $rel -Ns $Namespace -Target $color -ValuesFile 'values.prod.yaml'
   }
-} else {
-  # Determine current active colour from www ingress label if present
+} else { # Deploy single production environment (blue, green, active, inactive)
+  # Determine current active colour from configmap-active
   $ActiveColor = ''
   try {
-    $ActiveColor = kubectl -n $Namespace get ingress udpchat-www-www -o jsonpath='{.metadata.labels.app\.kubernetes\.io/color}' 2>$null
+    $ActiveColor = kubectl -n $Namespace get configmap udpchat-www-active -o jsonpath='{.data.active}' 2>$null
   } catch {}
   if (-not $ActiveColor) { $ActiveColor = 'green' }
 
@@ -138,7 +149,7 @@ if ($Environment -eq 'testing') {
     'active' { $ActiveColor }
     'inactive' { if ($ActiveColor -eq 'green') { 'blue' } else { 'green' } }
     default { $Environment }
-  }
+  } # Now Target is blue or green
 
   # Ensure release aligns with target colour
   $ReleaseName = "udpchat-$Target"
@@ -152,41 +163,3 @@ try {
   kubectl get svc -n $Namespace
   kubectl get ingress -n $Namespace
 } catch { }
-
-# Configure NSG rules for ingress access if this is testing environment
-if ($Environment -eq 'testing') {
-  Write-Host "\nConfiguring NSG rules for ingress access..." -ForegroundColor Cyan
-  try {
-    # Get AKS node resource group from Terraform outputs
-    $TerraformDir = Resolve-Path (Join-Path $RepoRoot 'deploy\terraform')
-    Push-Location $TerraformDir
-    $NodeRG = terraform output -raw aks_node_resource_group
-    Pop-Location
-    
-    if ($NodeRG) {
-      Write-Host "Found AKS node resource group: $NodeRG"
-      
-      # Get NSG name
-      $NsgName = az network nsg list --resource-group $NodeRG --query "[0].name" -o tsv
-      if ($NsgName) {
-        Write-Host "Found NSG: $NsgName"
-        
-        # Check if HTTP/HTTPS rule already exists
-        $ExistingRule = az network nsg rule list --resource-group $NodeRG --nsg-name $NsgName --query "[?name=='allow-http-https']" -o json
-        if (-not $ExistingRule -or $ExistingRule -eq '[]') {
-          Write-Host "Creating NSG rule to allow HTTP/HTTPS traffic..."
-          az network nsg rule create --resource-group $NodeRG --nsg-name $NsgName --name "allow-http-https" --priority 300 --access Allow --direction Inbound --protocol Tcp --source-address-prefixes Internet --source-port-ranges "*" --destination-address-prefixes "*" --destination-port-ranges 80 443 | Out-Null
-          Write-Host "NSG rule created successfully" -ForegroundColor Green
-        } else {
-          Write-Host "NSG rule already exists" -ForegroundColor Yellow
-        }
-      } else {
-        Write-Host "Warning: Could not find NSG in resource group $NodeRG" -ForegroundColor Yellow
-      }
-    } else {
-      Write-Host "Warning: Could not determine AKS node resource group from Terraform outputs" -ForegroundColor Yellow
-    }
-  } catch {
-    Write-Host "Warning: Failed to configure NSG rules: $($_.Exception.Message)" -ForegroundColor Yellow
-  }
-}

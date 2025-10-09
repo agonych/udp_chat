@@ -2,11 +2,14 @@
 set -e
 
 NS=udpchat-prod
-ACTIVE=$(kubectl -n "$NS" get ingress -l app.kubernetes.io/instance=udpchat-www -o jsonpath='{.items[0].metadata.labels.app\.kubernetes\.io/color}' 2>/dev/null || true)
-if [[ -z "$ACTIVE" ]]; then
-  echo unknown
-else
+
+# Read from configmap-active
+ACTIVE=$(kubectl -n "$NS" get configmap udpchat-www-active -o jsonpath='{.data.active}' 2>/dev/null || true)
+if [[ -n "$ACTIVE" ]]; then
   echo "$ACTIVE"
+else
+  # Default to green if www not deployed yet
+  echo "green"
 fi
 
 

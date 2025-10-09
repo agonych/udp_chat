@@ -17,8 +17,8 @@ CHART_DIR="$REPO_ROOT/deploy/helm/chart"
 NS="udpchat-prod"
 RELEASE="udpchat-www"
 
-# Detect current colour from ingress label if present
-CURRENT=$(kubectl -n "$NS" get ingress ${RELEASE}-www -o jsonpath='{.metadata.labels.app\.kubernetes\.io/color}' 2>/dev/null || true)
+# Detect current colour from configmap-active
+CURRENT=$(kubectl -n "$NS" get configmap ${RELEASE}-active -o jsonpath='{.data.active}' 2>/dev/null || true)
 if [[ -z "$CURRENT" ]]; then CURRENT="green"; fi
 
 if [[ "$ENV" == "toggle" ]]; then
