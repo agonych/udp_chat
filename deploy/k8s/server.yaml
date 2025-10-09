@@ -28,7 +28,7 @@ spec:
       containers:
       - name: server
         image: server:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         command: ["sh", "-c", "python main.py init_db && exec python main.py start"]
         ports:
         - containerPort: 9999
