@@ -16,7 +16,7 @@
     "dev": "nodemon connector.js"
   },
   "dependencies": {
-    "dotenv": "^16.5.0",
+    "dotenv": "^16.6.1",
     "nodemon": "^3.1.10",
     "prom-client": "^15.1.0",
     "uuid": "^11.1.0",
